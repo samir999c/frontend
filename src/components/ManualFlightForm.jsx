@@ -15,10 +15,8 @@ export default function ManualFlightForm() {
   const [error, setError] = useState("");
   const [searchStatus, setSearchStatus] = useState("");
   
-  // Use a ref to store the timeout ID to prevent memory leaks or duplicate polling
   const pollingTimeoutRef = useRef(null);
 
-  // Cleanup effect to clear timeout if the component unmounts
   useEffect(() => {
     return () => {
       if (pollingTimeoutRef.current) {
@@ -29,11 +27,11 @@ export default function ManualFlightForm() {
 
   const pollForResults = (searchId, token) => {
     let attempts = 0;
-    const maxAttempts = 12; // 12 attempts * 5 seconds = 60 seconds total
+    const maxAttempts = 12;
 
     const poll = async () => {
-      // Stop polling if a new search has started or component unmounted
-      if (!loading && !searchStatus) return; 
+      // Stop polling if a new search has been cancelled
+      if (!loading && !searchStatus && attempts > 0) return;
 
       if (attempts >= maxAttempts) {
         setError("Flight search timed out. Please try again.");
@@ -45,8 +43,8 @@ export default function ManualFlightForm() {
       setSearchStatus(`Searching... (Attempt ${attempts}/${maxAttempts})`);
 
       try {
-        // Pass currency and passengers as query params for final price conversion
-        const pollUrl = `${API_BASE_URL}/aviasales/flights/${searchId}?currency=${currency}&passengers=${passengers}`;
+        // **FIXED**: Changed URL from /aviasales/... to /koalaroute/...
+        const pollUrl = `${API_BASE_URL}/koalaroute/flights/${searchId}?currency=${currency}&passengers=${passengers}`;
         const res = await fetch(pollUrl, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -59,11 +57,10 @@ export default function ManualFlightForm() {
           if (data.data.length === 0) {
             setSearchStatus("No flights were found for the selected criteria.");
           } else {
-            setSearchStatus(""); // Clear status on success
-          } 
+            setSearchStatus("");
+          }
           setLoading(false);
         } else {
-          // If still pending, poll again after 5 seconds
           pollingTimeoutRef.current = setTimeout(poll, 5000);
         }
       } catch (err) {
@@ -98,8 +95,8 @@ export default function ManualFlightForm() {
     const token = localStorage.getItem("token");
 
     try {
-      // Step 1: Initialize the search and get a search_id
-      const res = await fetch(`${API_BASE_URL}/aviasales/flights`, {
+      // **FIXED**: Changed URL from /aviasales/... to /koalaroute/...
+      const res = await fetch(`${API_BASE_URL}/koalaroute/flights`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -118,7 +115,6 @@ export default function ManualFlightForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      // Step 2: Start polling for results with the received search_id
       pollForResults(data.search_id, token);
 
     } catch (err) {
@@ -128,11 +124,11 @@ export default function ManualFlightForm() {
     }
   };
 
-  // Helper functions for formatting dates and times
   const formatDate = (dateString) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString();
   };
+
   const formatTime = (dateString) => {
     if (!dateString) return "";
     return new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -142,7 +138,6 @@ export default function ManualFlightForm() {
     <div className="manual-flight-form">
       <h2>Search Flights</h2>
       <form onSubmit={handleSearch}>
-        {/* Your form inputs remain the same... */}
         <div className="form-row">
           <div className="form-group">
             <label>Origin</label>
