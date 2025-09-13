@@ -530,7 +530,7 @@ export default function ManualFlightForm() {
     const token = localStorage.getItem("token");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/aviasales/search`, {
+      const res = await fetch(`${API_BASE_URL}/aviasales/flights`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
