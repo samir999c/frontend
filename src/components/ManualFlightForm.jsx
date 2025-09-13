@@ -46,7 +46,7 @@ export default function ManualFlightForm() {
 
       try {
         // Pass currency and passengers as query params for final price conversion
-        const pollUrl = `${API_BASE_URL}/koalaroute/flights/${searchId}?currency=${currency}&passengers=${passengers}`;
+        const pollUrl = `${API_BASE_URL}/aviasales/flights/${searchId}?currency=${currency}&passengers=${passengers}`;
         const res = await fetch(pollUrl, {
           headers: { Authorization: `Bearer ${token}` },
         });
