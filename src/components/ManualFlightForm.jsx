@@ -27,83 +27,70 @@ export default function ManualFlightForm() {
     }
 
     setLoading(true);
-    setSearchStatus("Initializing flight search...");
+    setSearchStatus("Searching for flights... This may take a minute.");
     const token = localStorage.getItem("token");
 
     try {
-      // **FIXED**: Using the correct /koalaroute/flights endpoint
       const res = await fetch(`${API_BASE_URL}/koalaroute/flights`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: token ? `Bearer ${token}` : "",
         },
-        // **FIXED**: Body now matches the backend's expected format
         body: JSON.stringify({
           origin,
           destination,
           departure_at: departure,
-          return_at: returnDate,
-          currency,
+          return_at: returnDate || "", // Send empty string if not provided
           passengers,
           trip_class: tripClass,
+          // **CRITICAL FIX**: 'currency' is passed to our backend,
+          // which will use it for processing but NOT for the signature.
+          currency,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to start flight search");
+        // This will now catch the clear error from our backend
+        throw new Error(data.error || "An unknown error occurred during search.");
       }
 
-      // The backend immediately returns data and a search_id
       if (data.data && data.data.length > 0) {
         setFlights(data.data);
-        setSearchStatus("");
-        setLoading(false); // Stop loading since we have results
+        setSearchStatus(""); // Clear status on success
       } else {
-        // If no initial data, it might mean the search is just slow
-        setSearchStatus("Search in progress... This may take up to a minute.");
-        // We can optionally add polling here if the backend doesn't wait
-        // but the current koalaroute.js backend *does* wait, so this is fine.
-        // If results are still empty after the backend timeout, it means no flights were found.
-        setTimeout(() => {
-           setSearchStatus("No flights found for the selected criteria.");
-           setLoading(false);
-        }, 5000); // Give it a few extra seconds before showing "not found"
+        // This case is hit if the backend search times out and returns no flights
+        setSearchStatus("No flights were found for the selected criteria.");
       }
+
     } catch (err) {
       console.error("Flight search error:", err);
-      setError(err.message);
+      setError(err.message); // Display the error message from the backend
       setSearchStatus("");
     } finally {
-        // In this simplified model, the backend handles the waiting.
-        // We can just turn off loading after the attempt.
-        // For a more advanced UX, you would implement polling as in your first example.
-        if(!flights.length){ // Only set loading to false if we don't have flights yet
-             setTimeout(() => setLoading(false), 2000); // Give a bit of buffer
-        }
+      // This will always run after the try/catch block
+      setLoading(false);
     }
   };
 
-  // Helper functions for formatting
+  // Helper functions for formatting dates and times
   const formatDate = (dateString) => {
     if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+    return new Date(dateString).toLocaleDateString();
   };
 
   const formatTime = (dateString) => {
     if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   return (
     <div className="manual-flight-form">
       <h2>Search Flights</h2>
       <form onSubmit={handleSearch}>
-        {/* IATA code inputs */}
+        {/* Form inputs... */}
         <div className="form-row">
           <div className="form-group">
             <label>Origin (IATA code)</label>
@@ -113,6 +100,7 @@ export default function ManualFlightForm() {
               value={origin}
               onChange={(e) => setOrigin(e.target.value.toUpperCase())}
               maxLength={3}
+              required
             />
           </div>
           <div className="form-group">
@@ -123,11 +111,11 @@ export default function ManualFlightForm() {
               value={destination}
               onChange={(e) => setDestination(e.target.value.toUpperCase())}
               maxLength={3}
+              required
             />
           </div>
         </div>
 
-        {/* Date inputs */}
         <div className="form-row">
           <div className="form-group">
             <label>Departure Date</label>
@@ -136,6 +124,7 @@ export default function ManualFlightForm() {
               value={departure}
               onChange={(e) => setDeparture(e.target.value)}
               min={new Date().toISOString().split("T")[0]}
+              required
             />
           </div>
           <div className="form-group">
@@ -149,7 +138,6 @@ export default function ManualFlightForm() {
           </div>
         </div>
 
-        {/* Passenger, Class, and Currency inputs */}
         <div className="form-row">
           <div className="form-group">
             <label>Passengers</label>
@@ -193,6 +181,7 @@ export default function ManualFlightForm() {
         </button>
       </form>
 
+      {/* Status and Error Display */}
       {searchStatus && <div className="search-status">{searchStatus}</div>}
       {error && <p className="error-text">{error}</p>}
 
@@ -219,11 +208,11 @@ export default function ManualFlightForm() {
                     <div className="arrow">→</div>
                     <div className="segment">
                       <div className="city">{flight.destination}</div>
-                      <div className="time">{formatTime(flight.arrival_at)}</div>
-                      <div className="date">{formatDate(flight.arrival_at)}</div>
+                      {/* Arrival time might not always be present in the API response */}
+                      <div className="time">{flight.arrival_at ? formatTime(flight.arrival_at) : "--:--"}</div>
+                      <div className="date">{flight.arrival_at ? formatDate(flight.arrival_at) : "-"}</div>
                     </div>
                   </div>
-                  {/* Additional flight info can be added here */}
                 </div>
               </div>
             ))}
