@@ -60,7 +60,7 @@ export default function ManualFlightForm() {
             setSearchStatus("No flights were found for the selected criteria.");
           } else {
             setSearchStatus(""); // Clear status on success
-          }
+          } 
           setLoading(false);
         } else {
           // If still pending, poll again after 5 seconds
@@ -99,7 +99,7 @@ export default function ManualFlightForm() {
 
     try {
       // Step 1: Initialize the search and get a search_id
-      const res = await fetch(`${API_BASE_URL}/koalaroute/flights`, {
+      const res = await fetch(`${API_BASE_URL}/aviasales/flights`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
