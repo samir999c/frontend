@@ -49,28 +49,13 @@ export default function ManualFlightForm() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Polling failed");
 
-        // Check if proposals exist
-        const proposals = data.proposals || [];
-        if (proposals.length > 0) {
-          // Map proposals safely to display
-          const processedFlights = proposals.map((flight) => ({
-            airline: flight.airline || "Multiple Airlines",
-            origin: flight.segments?.[0]?.origin || flight.origin || "N/A",
-            destination: flight.segments?.slice(-1)[0]?.destination || flight.destination || "N/A",
-            departure_at: flight.departure_at || flight.segments?.[0]?.date || null,
-            arrival_at: flight.return_at || flight.segments?.slice(-1)[0]?.date || null,
-            price: flight.unified_price
-              ? (flight.unified_price / 100).toFixed(2) // convert cents to standard
-              : "N/A",
-            currency: flight.currency || currency.toUpperCase(),
-          }));
-
-          setFlights(processedFlights);
+        if (data.status === "complete" && data.data?.length > 0) {
+          setFlights(data.data); // backend already formats results
           setSearchStatus("");
           setLoading(false);
           return;
-        } else if (data.status === "pending" || data.search_id) {
-          pollingTimeoutRef.current = setTimeout(poll, 5000); // Retry in 5s
+        } else if (data.status === "pending") {
+          pollingTimeoutRef.current = setTimeout(poll, 5000);
         } else {
           setSearchStatus("No flights found yet. Retrying...");
           pollingTimeoutRef.current = setTimeout(poll, 5000);
@@ -132,10 +117,6 @@ export default function ManualFlightForm() {
       setLoading(false);
     }
   };
-
-  const formatDate = (dateString) => (dateString ? new Date(dateString).toLocaleDateString() : "-");
-  const formatTime = (dateString) =>
-    dateString ? new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--";
 
   return (
     <div className="manual-flight-form">
@@ -226,20 +207,24 @@ export default function ManualFlightForm() {
                   </div>
                 </div>
                 <div className="flight-details">
-                  <div className="route">
-                    <div className="segment">
-                      <div className="city">{flight.origin}</div>
-                      <div className="time">{formatTime(flight.departure_at)}</div>
-                      <div className="date">{formatDate(flight.departure_at)}</div>
-                    </div>
-                    <div className="arrow">→</div>
-                    <div className="segment">
-                      <div className="city">{flight.destination}</div>
-                      <div className="time">{formatTime(flight.arrival_at)}</div>
-                      <div className="date">{formatDate(flight.arrival_at)}</div>
-                    </div>
-                  </div>
+                  <p>
+                    {flight.origin} → {flight.destination}
+                  </p>
+                  <p>Depart: {flight.departure_at}</p>
+                  {flight.return_at && <p>Return: {flight.return_at}</p>}
                 </div>
+                {/* ✅ Affiliate Book Now button */}
+                <a
+                  href={`https://www.aviasales.com/search/${flight.origin}${flight.departure_at.replaceAll(
+                    "-",
+                    ""
+                  )}${flight.destination}${flight.return_at ? flight.return_at.replaceAll("-", "") : ""}1?marker=662691`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="book-now-btn"
+                >
+                  Book Now
+                </a>
               </div>
             ))}
           </div>
