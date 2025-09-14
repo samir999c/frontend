@@ -25,10 +25,11 @@ export default function ManualFlightForm() {
 
   const pollForResults = (searchId, token) => {
     let attempts = 0;
-    const maxAttempts = 25;
-    const delay = 3000; // 3 seconds
+    const maxAttempts = 24; // Up to 2 minutes with 5s interval
 
     const poll = async () => {
+      if (!loading) return;
+
       if (attempts >= maxAttempts) {
         setError("Flight search timed out. Please try again.");
         setSearchStatus("");
@@ -37,25 +38,42 @@ export default function ManualFlightForm() {
       }
 
       attempts++;
-      setSearchStatus(`Searching... (Attempt ${attempts}/${maxAttempts})`);
+      setSearchStatus(`Searching flights... (Attempt ${attempts}/${maxAttempts})`);
 
       try {
-        const pollUrl = `${API_BASE_URL}/koalaroute/flights/${searchId}?currency=${currency}&passengers=${passengers}`;
+        const pollUrl = `${API_BASE_URL}/koalaroute/flights/${searchId}`;
         const res = await fetch(pollUrl, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: token ? `Bearer ${token}` : "" },
         });
 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Polling failed");
 
-        if (data.status === "complete") {
-          setFlights(data.data);
-          setSearchStatus(
-            data.data.length === 0 ? "No flights were found." : ""
-          );
+        // Check if proposals exist
+        const proposals = data.proposals || [];
+        if (proposals.length > 0) {
+          // Map proposals safely to display
+          const processedFlights = proposals.map((flight) => ({
+            airline: flight.airline || "Multiple Airlines",
+            origin: flight.segments?.[0]?.origin || flight.origin || "N/A",
+            destination: flight.segments?.slice(-1)[0]?.destination || flight.destination || "N/A",
+            departure_at: flight.departure_at || flight.segments?.[0]?.date || null,
+            arrival_at: flight.return_at || flight.segments?.slice(-1)[0]?.date || null,
+            price: flight.unified_price
+              ? (flight.unified_price / 100).toFixed(2) // convert cents to standard
+              : "N/A",
+            currency: flight.currency || currency.toUpperCase(),
+          }));
+
+          setFlights(processedFlights);
+          setSearchStatus("");
           setLoading(false);
+          return;
+        } else if (data.status === "pending" || data.search_id) {
+          pollingTimeoutRef.current = setTimeout(poll, 5000); // Retry in 5s
         } else {
-          pollingTimeoutRef.current = setTimeout(poll, delay);
+          setSearchStatus("No flights found yet. Retrying...");
+          pollingTimeoutRef.current = setTimeout(poll, 5000);
         }
       } catch (err) {
         setError(err.message);
@@ -105,7 +123,7 @@ export default function ManualFlightForm() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.error || "Flight search initiation failed");
 
       pollForResults(data.search_id, token);
     } catch (err) {
@@ -115,18 +133,9 @@ export default function ManualFlightForm() {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const formatTime = (dateString) => {
-    if (!dateString) return "--:--";
-    return new Date(dateString).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const formatDate = (dateString) => (dateString ? new Date(dateString).toLocaleDateString() : "-");
+  const formatTime = (dateString) =>
+    dateString ? new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--";
 
   return (
     <div className="manual-flight-form">
@@ -156,37 +165,25 @@ export default function ManualFlightForm() {
             />
           </div>
         </div>
+
         <div className="form-row">
           <div className="form-group">
             <label>Departure</label>
-            <input
-              type="date"
-              value={departure}
-              onChange={(e) => setDeparture(e.target.value)}
-              min={new Date().toISOString().split("T")[0]}
-              required
-            />
+            <input type="date" value={departure} onChange={(e) => setDeparture(e.target.value)} required />
           </div>
           <div className="form-group">
             <label>Return</label>
-            <input
-              type="date"
-              value={returnDate}
-              onChange={(e) => setReturnDate(e.target.value)}
-              min={departure || new Date().toISOString().split("T")[0]}
-            />
+            <input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} />
           </div>
         </div>
+
         <div className="form-row">
           <div className="form-group">
             <label>Passengers</label>
-            <select
-              value={passengers}
-              onChange={(e) => setPassengers(parseInt(e.target.value))}
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                <option key={n} value={n}>
-                  {n}
+            <select value={passengers} onChange={(e) => setPassengers(parseInt(e.target.value))}>
+              {[...Array(8).keys()].map((n) => (
+                <option key={n + 1} value={n + 1}>
+                  {n + 1}
                 </option>
               ))}
             </select>
@@ -207,6 +204,7 @@ export default function ManualFlightForm() {
             </select>
           </div>
         </div>
+
         <button type="submit" disabled={loading}>
           {loading ? "Searching..." : "Search Flights"}
         </button>
@@ -219,10 +217,10 @@ export default function ManualFlightForm() {
         <div className="results-container">
           <h3>Found {flights.length} Flights</h3>
           <div className="flights-list">
-            {flights.map((flight, index) => (
-              <div key={index} className="flight-card">
+            {flights.map((flight, idx) => (
+              <div key={idx} className="flight-card">
                 <div className="flight-header">
-                  <div className="airline">{flight.airline || "Multiple Airlines"}</div>
+                  <div className="airline">{flight.airline}</div>
                   <div className="price">
                     {flight.price} {flight.currency}
                   </div>
@@ -237,8 +235,8 @@ export default function ManualFlightForm() {
                     <div className="arrow">→</div>
                     <div className="segment">
                       <div className="city">{flight.destination}</div>
-                      <div className="time">{formatTime(flight.return_at || flight.departure_at)}</div>
-                      <div className="date">{formatDate(flight.return_at || flight.departure_at)}</div>
+                      <div className="time">{formatTime(flight.arrival_at)}</div>
+                      <div className="date">{formatDate(flight.arrival_at)}</div>
                     </div>
                   </div>
                 </div>
