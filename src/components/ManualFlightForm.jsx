@@ -14,36 +14,32 @@ export default function ManualFlightForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchStatus, setSearchStatus] = useState("");
-  
+
   const pollingTimeoutRef = useRef(null);
 
   useEffect(() => {
     return () => {
-      if (pollingTimeoutRef.current) {
-        clearTimeout(pollingTimeoutRef.current);
-      }
+      if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
     };
   }, []);
 
   const pollForResults = (searchId, token) => {
     let attempts = 0;
-    const maxAttempts = 12;
+    const maxAttempts = 25;
+    const delay = 3000; // 3 seconds
 
     const poll = async () => {
-      // Stop polling if a new search has been cancelled
-      if (!loading && !searchStatus && attempts > 0) return;
-
       if (attempts >= maxAttempts) {
         setError("Flight search timed out. Please try again.");
         setSearchStatus("");
         setLoading(false);
         return;
       }
+
       attempts++;
       setSearchStatus(`Searching... (Attempt ${attempts}/${maxAttempts})`);
 
       try {
-        // **FIXED**: Changed URL from /aviasales/... to /koalaroute/...
         const pollUrl = `${API_BASE_URL}/koalaroute/flights/${searchId}?currency=${currency}&passengers=${passengers}`;
         const res = await fetch(pollUrl, {
           headers: { Authorization: `Bearer ${token}` },
@@ -52,16 +48,14 @@ export default function ManualFlightForm() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Polling failed");
 
-        if (data.status === 'complete') {
+        if (data.status === "complete") {
           setFlights(data.data);
-          if (data.data.length === 0) {
-            setSearchStatus("No flights were found for the selected criteria.");
-          } else {
-            setSearchStatus("");
-          }
+          setSearchStatus(
+            data.data.length === 0 ? "No flights were found." : ""
+          );
           setLoading(false);
         } else {
-          pollingTimeoutRef.current = setTimeout(poll, 5000);
+          pollingTimeoutRef.current = setTimeout(poll, delay);
         }
       } catch (err) {
         setError(err.message);
@@ -69,6 +63,7 @@ export default function ManualFlightForm() {
         setLoading(false);
       }
     };
+
     poll();
   };
 
@@ -77,9 +72,7 @@ export default function ManualFlightForm() {
     setError("");
     setFlights([]);
     setSearchStatus("");
-    if (pollingTimeoutRef.current) {
-        clearTimeout(pollingTimeoutRef.current);
-    }
+    if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
 
     if (!origin || !destination || !departure) {
       setError("Origin, destination, and departure date are required.");
@@ -95,7 +88,6 @@ export default function ManualFlightForm() {
     const token = localStorage.getItem("token");
 
     try {
-      // **FIXED**: Changed URL from /aviasales/... to /koalaroute/...
       const res = await fetch(`${API_BASE_URL}/koalaroute/flights`, {
         method: "POST",
         headers: {
@@ -114,9 +106,8 @@ export default function ManualFlightForm() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      
-      pollForResults(data.search_id, token);
 
+      pollForResults(data.search_id, token);
     } catch (err) {
       setError(err.message);
       setSearchStatus("");
@@ -130,8 +121,11 @@ export default function ManualFlightForm() {
   };
 
   const formatTime = (dateString) => {
-    if (!dateString) return "";
-    return new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    if (!dateString) return "--:--";
+    return new Date(dateString).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   return (
@@ -141,47 +135,81 @@ export default function ManualFlightForm() {
         <div className="form-row">
           <div className="form-group">
             <label>Origin</label>
-            <input type="text" placeholder="e.g., SYD" value={origin} onChange={(e) => setOrigin(e.target.value.toUpperCase())} maxLength={3} required />
+            <input
+              type="text"
+              placeholder="e.g., SYD"
+              value={origin}
+              onChange={(e) => setOrigin(e.target.value.toUpperCase())}
+              maxLength={3}
+              required
+            />
           </div>
           <div className="form-group">
             <label>Destination</label>
-            <input type="text" placeholder="e.g., MEL" value={destination} onChange={(e) => setDestination(e.target.value.toUpperCase())} maxLength={3} required />
+            <input
+              type="text"
+              placeholder="e.g., MEL"
+              value={destination}
+              onChange={(e) => setDestination(e.target.value.toUpperCase())}
+              maxLength={3}
+              required
+            />
           </div>
         </div>
         <div className="form-row">
           <div className="form-group">
             <label>Departure</label>
-            <input type="date" value={departure} onChange={(e) => setDeparture(e.target.value)} min={new Date().toISOString().split("T")[0]} required />
+            <input
+              type="date"
+              value={departure}
+              onChange={(e) => setDeparture(e.target.value)}
+              min={new Date().toISOString().split("T")[0]}
+              required
+            />
           </div>
           <div className="form-group">
             <label>Return</label>
-            <input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} min={departure || new Date().toISOString().split("T")[0]} />
+            <input
+              type="date"
+              value={returnDate}
+              onChange={(e) => setReturnDate(e.target.value)}
+              min={departure || new Date().toISOString().split("T")[0]}
+            />
           </div>
         </div>
         <div className="form-row">
-            <div className="form-group">
-                <label>Passengers</label>
-                <select value={passengers} onChange={(e) => setPassengers(parseInt(e.target.value))}>
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map(n => <option key={n} value={n}>{n}</option>)}
-                </select>
-            </div>
-            <div className="form-group">
-                <label>Class</label>
-                <select value={tripClass} onChange={(e) => setTripClass(e.target.value)}>
-                    <option value="Y">Economy</option>
-                    <option value="C">Business</option>
-                </select>
-            </div>
-            <div className="form-group">
-                <label>Currency</label>
-                <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                    <option value="usd">USD</option>
-                    <option value="eur">EUR</option>
-                    <option value="gbp">GBP</option>
-                </select>
-            </div>
+          <div className="form-group">
+            <label>Passengers</label>
+            <select
+              value={passengers}
+              onChange={(e) => setPassengers(parseInt(e.target.value))}
+            >
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Class</label>
+            <select value={tripClass} onChange={(e) => setTripClass(e.target.value)}>
+              <option value="Y">Economy</option>
+              <option value="C">Business</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Currency</label>
+            <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+              <option value="usd">USD</option>
+              <option value="eur">EUR</option>
+              <option value="gbp">GBP</option>
+            </select>
+          </div>
         </div>
-        <button type="submit" disabled={loading}>{loading ? "Searching..." : "Search Flights"}</button>
+        <button type="submit" disabled={loading}>
+          {loading ? "Searching..." : "Search Flights"}
+        </button>
       </form>
 
       {searchStatus && <div className="search-status">{searchStatus}</div>}
@@ -195,7 +223,9 @@ export default function ManualFlightForm() {
               <div key={index} className="flight-card">
                 <div className="flight-header">
                   <div className="airline">{flight.airline || "Multiple Airlines"}</div>
-                  <div className="price">{flight.price} {flight.currency}</div>
+                  <div className="price">
+                    {flight.price} {flight.currency}
+                  </div>
                 </div>
                 <div className="flight-details">
                   <div className="route">
@@ -207,8 +237,8 @@ export default function ManualFlightForm() {
                     <div className="arrow">→</div>
                     <div className="segment">
                       <div className="city">{flight.destination}</div>
-                      <div className="time">{flight.arrival_at ? formatTime(flight.arrival_at) : "--:--"}</div>
-                      <div className="date">{flight.arrival_at ? formatDate(flight.arrival_at) : "-"}</div>
+                      <div className="time">{formatTime(flight.return_at || flight.departure_at)}</div>
+                      <div className="date">{formatDate(flight.return_at || flight.departure_at)}</div>
                     </div>
                   </div>
                 </div>
