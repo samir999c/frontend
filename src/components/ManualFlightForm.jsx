@@ -28,7 +28,7 @@ export default function ManualFlightForm() {
 
   const pollForResults = (searchId, token) => {
     let attempts = 0;
-    const maxAttempts = 12;
+    const maxAttempts = 12; // 12 attempts * 5 seconds = 60 seconds total
 
     const poll = async () => {
       if (attempts >= maxAttempts) {
@@ -51,8 +51,8 @@ export default function ManualFlightForm() {
 
         if (data.status === 'complete') {
           setFlights(data.data);
-          setSearchStatus(data.data.length === 0 ? "No flights were found for the selected criteria." : "");
-          setLoading(false); // **CRITICAL**: Stop loading on success
+          setSearchStatus(data.data.length === 0 ? "No flights were found." : "");
+          setLoading(false); // Stop loading on success
         } else {
           // If still pending, poll again after 5 seconds
           pollingTimeoutRef.current = setTimeout(poll, 5000);
@@ -60,7 +60,7 @@ export default function ManualFlightForm() {
       } catch (err) {
         setError(err.message);
         setSearchStatus("");
-        setLoading(false); // **CRITICAL**: Stop loading on error
+        setLoading(false); // Stop loading on error
       }
     };
     poll();
@@ -89,6 +89,7 @@ export default function ManualFlightForm() {
     const token = localStorage.getItem("token");
 
     try {
+      // Step 1: Initialize the search and get a search_id
       const res = await fetch(`${API_BASE_URL}/koalaroute/flights`, {
         method: "POST",
         headers: {
@@ -108,6 +109,7 @@ export default function ManualFlightForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start search");
       
+      // Step 2: Start polling for results with the received search_id
       pollForResults(data.search_id, token);
 
     } catch (err) {
