@@ -52,7 +52,7 @@ export default function ManualFlightForm() {
         if (data.status === 'complete') {
           setFlights(data.data);
           setSearchStatus(data.data.length === 0 ? "No flights were found." : "");
-          setLoading(false);
+          setLoading(false); // Stop loading on success
         } else {
           // If still pending, poll again after 5 seconds
           pollingTimeoutRef.current = setTimeout(poll, 5000);
@@ -60,7 +60,7 @@ export default function ManualFlightForm() {
       } catch (err) {
         setError(err.message);
         setSearchStatus("");
-        setLoading(false);
+        setLoading(false); // Stop loading on error
       }
     };
     poll();
@@ -103,7 +103,6 @@ export default function ManualFlightForm() {
           return_at: returnDate || "",
           passengers,
           trip_class: tripClass,
-          currency,
         }),
       });
 
@@ -116,7 +115,7 @@ export default function ManualFlightForm() {
     } catch (err) {
       setError(err.message);
       setSearchStatus("");
-      setLoading(false);
+      setLoading(false); // Stop loading if the initial request fails
     }
   };
 
@@ -125,17 +124,16 @@ export default function ManualFlightForm() {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString();
   };
-
   const formatTime = (dateString) => {
     if (!dateString) return "";
-    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   return (
     <div className="manual-flight-form">
       <h2>Search Flights</h2>
       <form onSubmit={handleSearch}>
-        {/* Your form JSX... */}
+        {/* Your form JSX remains the same */}
         <div className="form-row">
           <div className="form-group">
             <label>Origin</label>
@@ -189,10 +187,10 @@ export default function ManualFlightForm() {
         <div className="results-container">
           <h3>Found {flights.length} Flights</h3>
           <div className="flights-list">
-            {flights.map((flight) => (
-              <div key={flight.sign} className="flight-card">
+            {flights.map((flight, index) => (
+              <div key={index} className="flight-card">
                 <div className="flight-header">
-                  <div className="airline">{flight.marketing_carrier || "N/A"}</div>
+                  <div className="airline">{flight.airline || "Multiple Airlines"}</div>
                   <div className="price">{flight.price} {flight.currency}</div>
                 </div>
                 <div className="flight-details">
@@ -205,8 +203,8 @@ export default function ManualFlightForm() {
                     <div className="arrow">→</div>
                     <div className="segment">
                       <div className="city">{flight.destination}</div>
-                      <div className="time">{formatTime(flight.arrival_at)}</div>
-                      <div className="date">{formatDate(flight.arrival_at)}</div>
+                      <div className="time">{flight.arrival_at ? formatTime(flight.arrival_at) : "--:--"}</div>
+                      <div className="date">{flight.arrival_at ? formatDate(flight.arrival_at) : "-"}</div>
                     </div>
                   </div>
                 </div>
