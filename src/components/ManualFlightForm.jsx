@@ -28,7 +28,7 @@ export default function ManualFlightForm() {
 
   const pollForResults = (searchId, token) => {
     let attempts = 0;
-    const maxAttempts = 12;
+    const maxAttempts = 12; // 12 attempts * 5 seconds = 60 seconds total
 
     const poll = async () => {
       if (attempts >= maxAttempts) {
@@ -51,8 +51,8 @@ export default function ManualFlightForm() {
 
         if (data.status === 'complete') {
           setFlights(data.data);
-          setSearchStatus(data.data.length === 0 ? "No flights were found for the selected criteria." : "");
-          setLoading(false); // **CRITICAL**: Stop loading on success
+          setSearchStatus(data.data.length === 0 ? "No flights were found." : "");
+          setLoading(false);
         } else {
           // If still pending, poll again after 5 seconds
           pollingTimeoutRef.current = setTimeout(poll, 5000);
@@ -60,7 +60,7 @@ export default function ManualFlightForm() {
       } catch (err) {
         setError(err.message);
         setSearchStatus("");
-        setLoading(false); // **CRITICAL**: Stop loading on error
+        setLoading(false);
       }
     };
     poll();
@@ -89,6 +89,7 @@ export default function ManualFlightForm() {
     const token = localStorage.getItem("token");
 
     try {
+      // Step 1: Initialize the search and get a search_id
       const res = await fetch(`${API_BASE_URL}/koalaroute/flights`, {
         method: "POST",
         headers: {
@@ -102,18 +103,20 @@ export default function ManualFlightForm() {
           return_at: returnDate || "",
           passengers,
           trip_class: tripClass,
+          currency,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start search");
       
+      // Step 2: Start polling for results with the received search_id
       pollForResults(data.search_id, token);
 
     } catch (err) {
       setError(err.message);
       setSearchStatus("");
-      setLoading(false); // Stop loading if the initial request fails
+      setLoading(false);
     }
   };
 
@@ -122,16 +125,17 @@ export default function ManualFlightForm() {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString();
   };
+
   const formatTime = (dateString) => {
     if (!dateString) return "";
-    return new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
     <div className="manual-flight-form">
       <h2>Search Flights</h2>
       <form onSubmit={handleSearch}>
-        {/* Your form JSX remains the same */}
+        {/* Your form JSX... */}
         <div className="form-row">
           <div className="form-group">
             <label>Origin</label>
@@ -185,10 +189,10 @@ export default function ManualFlightForm() {
         <div className="results-container">
           <h3>Found {flights.length} Flights</h3>
           <div className="flights-list">
-            {flights.map((flight, index) => (
-              <div key={index} className="flight-card">
+            {flights.map((flight) => (
+              <div key={flight.sign} className="flight-card">
                 <div className="flight-header">
-                  <div className="airline">{flight.airline || "Multiple Airlines"}</div>
+                  <div className="airline">{flight.marketing_carrier || "N/A"}</div>
                   <div className="price">{flight.price} {flight.currency}</div>
                 </div>
                 <div className="flight-details">
@@ -201,8 +205,8 @@ export default function ManualFlightForm() {
                     <div className="arrow">→</div>
                     <div className="segment">
                       <div className="city">{flight.destination}</div>
-                      <div className="time">{flight.arrival_at ? formatTime(flight.arrival_at) : "--:--"}</div>
-                      <div className="date">{flight.arrival_at ? formatDate(flight.arrival_at) : "-"}</div>
+                      <div className="time">{formatTime(flight.arrival_at)}</div>
+                      <div className="date">{formatDate(flight.arrival_at)}</div>
                     </div>
                   </div>
                 </div>
