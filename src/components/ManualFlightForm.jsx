@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { API_BASE_URL } from "../config";
 import "./ManualFlightForm.css";
 
@@ -14,12 +14,66 @@ export default function ManualFlightForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchStatus, setSearchStatus] = useState("");
+  
+  const pollingTimeoutRef = useRef(null);
+
+  // Cleanup effect to clear timeout if the component unmounts
+  useEffect(() => {
+    return () => {
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const pollForResults = (searchId, token) => {
+    let attempts = 0;
+    const maxAttempts = 12;
+
+    const poll = async () => {
+      if (attempts >= maxAttempts) {
+        setError("Flight search timed out. Please try again.");
+        setSearchStatus("");
+        setLoading(false);
+        return;
+      }
+      attempts++;
+      setSearchStatus(`Searching... (Attempt ${attempts}/${maxAttempts})`);
+
+      try {
+        const pollUrl = `${API_BASE_URL}/koalaroute/flights/${searchId}?currency=${currency}&passengers=${passengers}`;
+        const res = await fetch(pollUrl, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Polling failed");
+
+        if (data.status === 'complete') {
+          setFlights(data.data);
+          setSearchStatus(data.data.length === 0 ? "No flights were found for the selected criteria." : "");
+          setLoading(false); // **CRITICAL**: Stop loading on success
+        } else {
+          // If still pending, poll again after 5 seconds
+          pollingTimeoutRef.current = setTimeout(poll, 5000);
+        }
+      } catch (err) {
+        setError(err.message);
+        setSearchStatus("");
+        setLoading(false); // **CRITICAL**: Stop loading on error
+      }
+    };
+    poll();
+  };
 
   const handleSearch = async (e) => {
     e.preventDefault();
     setError("");
     setFlights([]);
     setSearchStatus("");
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+    }
 
     if (!origin || !destination || !departure) {
       setError("Origin, destination, and departure date are required.");
@@ -31,11 +85,10 @@ export default function ManualFlightForm() {
     }
 
     setLoading(true);
-    setSearchStatus("Searching for flights... This may take up to a minute.");
+    setSearchStatus("Initializing search...");
     const token = localStorage.getItem("token");
 
     try {
-      // Frontend now makes a single request and waits for the final response
       const res = await fetch(`${API_BASE_URL}/koalaroute/flights`, {
         method: "POST",
         headers: {
@@ -49,28 +102,18 @@ export default function ManualFlightForm() {
           return_at: returnDate || "",
           passengers,
           trip_class: tripClass,
-          currency,
         }),
       });
 
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to start search");
+      
+      pollForResults(data.search_id, token);
 
-      if (!res.ok) {
-        throw new Error(data.error || "An unknown error occurred.");
-      }
-
-      if (data.data && data.data.length > 0) {
-        setFlights(data.data);
-        setSearchStatus("");
-      } else {
-        setSearchStatus("No flights were found for the selected criteria.");
-      }
     } catch (err) {
-      console.error("Flight search error:", err);
       setError(err.message);
       setSearchStatus("");
-    } finally {
-      setLoading(false);
+      setLoading(false); // Stop loading if the initial request fails
     }
   };
 
@@ -88,7 +131,7 @@ export default function ManualFlightForm() {
     <div className="manual-flight-form">
       <h2>Search Flights</h2>
       <form onSubmit={handleSearch}>
-        {/* Your JSX remains the same */}
+        {/* Your form JSX remains the same */}
         <div className="form-row">
           <div className="form-group">
             <label>Origin</label>
@@ -141,7 +184,31 @@ export default function ManualFlightForm() {
       {flights.length > 0 && (
         <div className="results-container">
           <h3>Found {flights.length} Flights</h3>
-          {/* Your results display JSX remains the same */}
+          <div className="flights-list">
+            {flights.map((flight, index) => (
+              <div key={index} className="flight-card">
+                <div className="flight-header">
+                  <div className="airline">{flight.airline || "Multiple Airlines"}</div>
+                  <div className="price">{flight.price} {flight.currency}</div>
+                </div>
+                <div className="flight-details">
+                  <div className="route">
+                    <div className="segment">
+                      <div className="city">{flight.origin}</div>
+                      <div className="time">{formatTime(flight.departure_at)}</div>
+                      <div className="date">{formatDate(flight.departure_at)}</div>
+                    </div>
+                    <div className="arrow">→</div>
+                    <div className="segment">
+                      <div className="city">{flight.destination}</div>
+                      <div className="time">{flight.arrival_at ? formatTime(flight.arrival_at) : "--:--"}</div>
+                      <div className="date">{flight.arrival_at ? formatDate(flight.arrival_at) : "-"}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
