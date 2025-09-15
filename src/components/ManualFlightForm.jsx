@@ -2,12 +2,14 @@ import React, { useState, useRef, useEffect } from "react";
 import { API_BASE_URL } from "../config";
 import "./ManualFlightForm.css";
 
+const AFFILIATE_MARKER = "662691"; 
+
 export default function ManualFlightForm() {
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [departure, setDeparture] = useState("");
   const [returnDate, setReturnDate] = useState("");
-  const [currency, setCurrency] = useState("usd");
+  const [currency, setCurrency] = useState("USD");
   const [passengers, setPassengers] = useState(1);
   const [tripClass, setTripClass] = useState("Y");
   const [flights, setFlights] = useState([]);
@@ -25,11 +27,10 @@ export default function ManualFlightForm() {
 
   const pollForResults = (searchId, token) => {
     let attempts = 0;
-    const maxAttempts = 24; // Up to 2 minutes with 5s interval
+    const maxAttempts = 20;
 
     const poll = async () => {
       if (!loading) return;
-
       if (attempts >= maxAttempts) {
         setError("Flight search timed out. Please try again.");
         setSearchStatus("");
@@ -38,23 +39,24 @@ export default function ManualFlightForm() {
       }
 
       attempts++;
-      setSearchStatus(`Searching flights... (Attempt ${attempts}/${maxAttempts})`);
+      setSearchStatus(`Fetching flights... (Attempt ${attempts}/${maxAttempts})`);
 
       try {
-        const pollUrl = `${API_BASE_URL}/koalaroute/flights/${searchId}`;
-        const res = await fetch(pollUrl, {
+        const res = await fetch(`${API_BASE_URL}/koalaroute/flights/${searchId}`, {
           headers: { Authorization: token ? `Bearer ${token}` : "" },
         });
-
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Polling failed");
 
-        if (data.status === "complete" && data.data?.length > 0) {
-          setFlights(data.data); // backend already formats results
+        if (data.status === "complete" && Array.isArray(data.proposals) && data.proposals.length > 0) {
+          setFlights(data.proposals);
           setSearchStatus("");
           setLoading(false);
           return;
-        } else if (data.status === "pending") {
+        }
+
+        if (data.status === "pending") {
+          setSearchStatus("Still searching... please wait");
           pollingTimeoutRef.current = setTimeout(poll, 5000);
         } else {
           setSearchStatus("No flights found yet. Retrying...");
@@ -75,6 +77,7 @@ export default function ManualFlightForm() {
     setError("");
     setFlights([]);
     setSearchStatus("");
+
     if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
 
     if (!origin || !destination || !departure) {
@@ -110,12 +113,35 @@ export default function ManualFlightForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Flight search initiation failed");
 
-      pollForResults(data.search_id, token);
+      if (data.search_id) {
+        pollForResults(data.search_id, token);
+      } else {
+        throw new Error("No search_id received from backend.");
+      }
     } catch (err) {
       setError(err.message);
       setSearchStatus("");
       setLoading(false);
     }
+  };
+
+  const formatDate = (dateString) =>
+    dateString ? new Date(dateString).toLocaleDateString() : "-";
+  const formatTime = (dateString) =>
+    dateString
+      ? new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : "--:--";
+
+  // ✅ Generate affiliate booking link
+  const getBookingUrl = (flight) => {
+    const baseUrl = "https://www.aviasales.com/search";
+    const dep = flight.departure_at ? new Date(flight.departure_at) : null;
+    const ret = flight.return_at ? new Date(flight.return_at) : null;
+
+    const depDate = dep ? dep.toISOString().split("T")[0].replace(/-/g, "") : "";
+    const retDate = ret ? ret.toISOString().split("T")[0].replace(/-/g, "") : "";
+
+    return `${baseUrl}/${flight.origin}${depDate}${flight.destination}${retDate}?marker=${AFFILIATE_MARKER}&currency=${currency}`;
   };
 
   return (
@@ -150,18 +176,30 @@ export default function ManualFlightForm() {
         <div className="form-row">
           <div className="form-group">
             <label>Departure</label>
-            <input type="date" value={departure} onChange={(e) => setDeparture(e.target.value)} required />
+            <input
+              type="date"
+              value={departure}
+              onChange={(e) => setDeparture(e.target.value)}
+              required
+            />
           </div>
           <div className="form-group">
             <label>Return</label>
-            <input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} />
+            <input
+              type="date"
+              value={returnDate}
+              onChange={(e) => setReturnDate(e.target.value)}
+            />
           </div>
         </div>
 
         <div className="form-row">
           <div className="form-group">
             <label>Passengers</label>
-            <select value={passengers} onChange={(e) => setPassengers(parseInt(e.target.value))}>
+            <select
+              value={passengers}
+              onChange={(e) => setPassengers(parseInt(e.target.value))}
+            >
               {[...Array(8).keys()].map((n) => (
                 <option key={n + 1} value={n + 1}>
                   {n + 1}
@@ -171,17 +209,23 @@ export default function ManualFlightForm() {
           </div>
           <div className="form-group">
             <label>Class</label>
-            <select value={tripClass} onChange={(e) => setTripClass(e.target.value)}>
+            <select
+              value={tripClass}
+              onChange={(e) => setTripClass(e.target.value)}
+            >
               <option value="Y">Economy</option>
               <option value="C">Business</option>
             </select>
           </div>
           <div className="form-group">
             <label>Currency</label>
-            <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-              <option value="usd">USD</option>
-              <option value="eur">EUR</option>
-              <option value="gbp">GBP</option>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+            >
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
             </select>
           </div>
         </div>
@@ -207,24 +251,32 @@ export default function ManualFlightForm() {
                   </div>
                 </div>
                 <div className="flight-details">
-                  <p>
-                    {flight.origin} → {flight.destination}
-                  </p>
-                  <p>Depart: {flight.departure_at}</p>
-                  {flight.return_at && <p>Return: {flight.return_at}</p>}
+                  <div className="route">
+                    <div className="segment">
+                      <div className="city">{flight.origin}</div>
+                      <div className="time">{formatTime(flight.departure_at)}</div>
+                      <div className="date">{formatDate(flight.departure_at)}</div>
+                    </div>
+                    <div className="arrow">→</div>
+                    <div className="segment">
+                      <div className="city">{flight.destination}</div>
+                      <div className="time">{formatTime(flight.return_at)}</div>
+                      <div className="date">{formatDate(flight.return_at)}</div>
+                    </div>
+                  </div>
                 </div>
-                {/* ✅ Affiliate Book Now button */}
-                <a
-                  href={`https://www.aviasales.com/search/${flight.origin}${flight.departure_at.replaceAll(
-                    "-",
-                    ""
-                  )}${flight.destination}${flight.return_at ? flight.return_at.replaceAll("-", "") : ""}1?marker=662691`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="book-now-btn"
-                >
-                  Book Now
-                </a>
+
+                {/* ✅ Book Now Button */}
+                <div className="book-now">
+                  <a
+                    href={getBookingUrl(flight)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="book-button"
+                  >
+                    Book Now
+                  </a>
+                </div>
               </div>
             ))}
           </div>
