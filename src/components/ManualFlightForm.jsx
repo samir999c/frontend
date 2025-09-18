@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { API_BASE_URL } from "../config";
+import { API_BASE_URL } from "../config.js";
 import "./ManualFlightForm.css";
 
 export default function ManualFlightForm() {
@@ -14,10 +14,16 @@ export default function ManualFlightForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchStatus, setSearchStatus] = useState("");
+  
   const pollingTimeoutRef = useRef(null);
 
+  // Cleanup effect to clear timeout if the component unmounts
   useEffect(() => {
-    return () => { if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current); };
+    return () => {
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+      }
+    };
   }, []);
 
   const pollForResults = (searchId, token) => {
@@ -37,25 +43,24 @@ export default function ManualFlightForm() {
       try {
         const pollUrl = `${API_BASE_URL}/koalaroute/flights/${searchId}?currency=${currency}&passengers=${passengers}`;
         const res = await fetch(pollUrl, {
-          headers: { 
-            // **CRITICAL FIX**: Authorization header added here
-            Authorization: `Bearer ${token}` 
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
+
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Polling failed");
 
         if (data.status === 'complete') {
           setFlights(data.data);
-          setSearchStatus(data.data.length === 0 ? "No flights were found." : "");
-          setLoading(false);
+          setSearchStatus(data.data.length === 0 ? "No flights were found for the selected criteria." : "");
+          setLoading(false); // **CRITICAL**: Stop loading on success
         } else {
+          // If still pending, poll again after 5 seconds
           pollingTimeoutRef.current = setTimeout(poll, 5000);
         }
       } catch (err) {
         setError(err.message);
         setSearchStatus("");
-        setLoading(false);
+        setLoading(false); // **CRITICAL**: Stop loading on error
       }
     };
     poll();
@@ -66,7 +71,9 @@ export default function ManualFlightForm() {
     setError("");
     setFlights([]);
     setSearchStatus("");
-    if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+    }
 
     if (!origin || !destination || !departure) {
       setError("Origin, destination, and departure date are required.");
@@ -81,22 +88,12 @@ export default function ManualFlightForm() {
     setSearchStatus("Initializing search...");
     const token = localStorage.getItem("token");
 
-    // **CRITICAL FIX**: Check for token *before* making the request
-    if (!token) {
-        setError("Authentication error. Please log in again.");
-        setLoading(false);
-        setSearchStatus("");
-        // Optionally redirect to login page here
-        return;
-    }
-
     try {
       const res = await fetch(`${API_BASE_URL}/koalaroute/flights`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          // **CRITICAL FIX**: Authorization header was already here, but now it's confirmed necessary
-          Authorization: `Bearer ${token}` 
+          Authorization: token ? `Bearer ${token}` : "",
         },
         body: JSON.stringify({
           origin,
@@ -105,32 +102,115 @@ export default function ManualFlightForm() {
           return_at: returnDate || "",
           passengers,
           trip_class: tripClass,
-          currency,
         }),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start search");
+      
       pollForResults(data.search_id, token);
+
     } catch (err) {
       setError(err.message);
       setSearchStatus("");
-      setLoading(false);
+      setLoading(false); // Stop loading if the initial request fails
     }
   };
 
+  // Helper functions for formatting dates and times
   const formatDate = (dateString) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString();
   };
   const formatTime = (dateString) => {
     if (!dateString) return "";
-    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
-  
-  // The JSX for your form and results display remains the same
+
   return (
     <div className="manual-flight-form">
-      {/* ... your form and results display JSX ... */}
+      <h2>Search Flights</h2>
+      <form onSubmit={handleSearch}>
+        {/* Your form JSX remains the same */}
+        <div className="form-row">
+          <div className="form-group">
+            <label>Origin</label>
+            <input type="text" placeholder="e.g., SYD" value={origin} onChange={(e) => setOrigin(e.target.value.toUpperCase())} maxLength={3} required />
+          </div>
+          <div className="form-group">
+            <label>Destination</label>
+            <input type="text" placeholder="e.g., MEL" value={destination} onChange={(e) => setDestination(e.target.value.toUpperCase())} maxLength={3} required />
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Departure</label>
+            <input type="date" value={departure} onChange={(e) => setDeparture(e.target.value)} min={new Date().toISOString().split("T")[0]} required />
+          </div>
+          <div className="form-group">
+            <label>Return</label>
+            <input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} min={departure || new Date().toISOString().split("T")[0]} />
+          </div>
+        </div>
+        <div className="form-row">
+            <div className="form-group">
+                <label>Passengers</label>
+                <select value={passengers} onChange={(e) => setPassengers(parseInt(e.target.value))}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+            </div>
+            <div className="form-group">
+                <label>Class</label>
+                <select value={tripClass} onChange={(e) => setTripClass(e.target.value)}>
+                    <option value="Y">Economy</option>
+                    <option value="C">Business</option>
+                </select>
+            </div>
+            <div className="form-group">
+                <label>Currency</label>
+                <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                    <option value="usd">USD</option>
+                    <option value="eur">EUR</option>
+                    <option value="gbp">GBP</option>
+                </select>
+            </div>
+        </div>
+        <button type="submit" disabled={loading}>{loading ? "Searching..." : "Search Flights"}</button>
+      </form>
+
+      {searchStatus && <div className="search-status">{searchStatus}</div>}
+      {error && <p className="error-text">{error}</p>}
+
+      {flights.length > 0 && (
+        <div className="results-container">
+          <h3>Found {flights.length} Flights</h3>
+          <div className="flights-list">
+            {flights.map((flight, index) => (
+              <div key={index} className="flight-card">
+                <div className="flight-header">
+                  <div className="airline">{flight.airline || "Multiple Airlines"}</div>
+                  <div className="price">{flight.price} {flight.currency}</div>
+                </div>
+                <div className="flight-details">
+                  <div className="route">
+                    <div className="segment">
+                      <div className="city">{flight.origin}</div>
+                      <div className="time">{formatTime(flight.departure_at)}</div>
+                      <div className="date">{formatDate(flight.departure_at)}</div>
+                    </div>
+                    <div className="arrow">→</div>
+                    <div className="segment">
+                      <div className="city">{flight.destination}</div>
+                      <div className="time">{flight.arrival_at ? formatTime(flight.arrival_at) : "--:--"}</div>
+                      <div className="date">{flight.arrival_at ? formatDate(flight.arrival_at) : "-"}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
