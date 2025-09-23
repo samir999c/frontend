@@ -1,210 +1,130 @@
-import React, { useState, useRef, useEffect } from "react";
-import { API_BASE_URL } from "../config.js";
+import React, { useState } from "react";
+import { API_BASE_URL } from "../config.js"; // Ensure this points to your backend URL
 import "./ManualFlightForm.css";
 
 export default function ManualFlightForm() {
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
-  const [departure, setDeparture] = useState("");
-  const [returnDate, setReturnDate] = useState("");
-  const [currency, setCurrency] = useState("usd");
-  const [passengers, setPassengers] = useState(1);
-  const [tripClass, setTripClass] = useState("Y");
+  const [departureDate, setDepartureDate] = useState("");
   const [flights, setFlights] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [searchStatus, setSearchStatus] = useState("");
-  
-  const pollingTimeoutRef = useRef(null);
-
-  // Cleanup effect to clear timeout if the component unmounts
-  useEffect(() => {
-    return () => {
-      if (pollingTimeoutRef.current) {
-        clearTimeout(pollingTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const pollForResults = (searchId, token) => {
-    let attempts = 0;
-    const maxAttempts = 12;
-
-    const poll = async () => {
-      if (attempts >= maxAttempts) {
-        setError("Flight search timed out. Please try again.");
-        setSearchStatus("");
-        setLoading(false);
-        return;
-      }
-      attempts++;
-      setSearchStatus(`Searching... (Attempt ${attempts}/${maxAttempts})`);
-
-      try {
-        const pollUrl = `${API_BASE_URL}/koalaroute/flights/${searchId}?currency=${currency}&passengers=${passengers}`;
-        const res = await fetch(pollUrl, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Polling failed");
-
-        if (data.status === 'complete') {
-          setFlights(data.data);
-          setSearchStatus(data.data.length === 0 ? "No flights were found for the selected criteria." : "");
-          setLoading(false); // **CRITICAL**: Stop loading on success
-        } else {
-          // If still pending, poll again after 5 seconds
-          pollingTimeoutRef.current = setTimeout(poll, 5000);
-        }
-      } catch (err) {
-        setError(err.message);
-        setSearchStatus("");
-        setLoading(false); // **CRITICAL**: Stop loading on error
-      }
-    };
-    poll();
-  };
 
   const handleSearch = async (e) => {
     e.preventDefault();
     setError("");
     setFlights([]);
-    setSearchStatus("");
-    if (pollingTimeoutRef.current) {
-      clearTimeout(pollingTimeoutRef.current);
-    }
-
-    if (!origin || !destination || !departure) {
-      setError("Origin, destination, and departure date are required.");
-      return;
-    }
-    if (origin === destination) {
-      setError("Origin and destination cannot be the same.");
-      return;
-    }
-
     setLoading(true);
-    setSearchStatus("Initializing search...");
-    const token = localStorage.getItem("token");
+
+    if (!origin || !destination || !departureDate) {
+      setError("Origin, destination, and departure date are required.");
+      setLoading(false);
+      return;
+    }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/koalaroute/flights`, {
+      // Step 1: Search for flights (single request, no polling)
+      const res = await fetch(`${API_BASE_URL}/duffel/search`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          origin,
-          destination,
-          departure_at: departure,
-          return_at: returnDate || "",
-          passengers,
-          trip_class: tripClass,
+          origin: origin,
+          destination: destination,
+          departure_date: departureDate,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to start search");
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to search for flights.");
+      }
       
-      pollForResults(data.search_id, token);
+      setFlights(data.data);
 
     } catch (err) {
       setError(err.message);
-      setSearchStatus("");
-      setLoading(false); // Stop loading if the initial request fails
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Helper functions for formatting dates and times
-  const formatDate = (dateString) => {
-    if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString();
-  };
-  const formatTime = (dateString) => {
-    if (!dateString) return "";
-    return new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const handleBooking = async (offerId, buttonElement) => {
+    buttonElement.disabled = true;
+    buttonElement.innerText = "Creating Link...";
+
+    try {
+      // Step 2: Create the Duffel Link
+      const res = await fetch(`${API_BASE_URL}/duffel/create-link`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ offer_id: offerId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create booking link.");
+      }
+
+      // Step 3: Redirect user to the secure checkout page
+      window.location.href = data.url;
+
+    } catch (err) {
+        alert(err.message); // Show error to the user
+        buttonElement.disabled = false;
+        buttonElement.innerText = "Book Now";
+    }
   };
 
   return (
     <div className="manual-flight-form">
-      <h2>Search Flights</h2>
+      <h2>Search Flights with Duffel</h2>
       <form onSubmit={handleSearch}>
-        {/* Your form JSX remains the same */}
         <div className="form-row">
           <div className="form-group">
-            <label>Origin</label>
-            <input type="text" placeholder="e.g., SYD" value={origin} onChange={(e) => setOrigin(e.target.value.toUpperCase())} maxLength={3} required />
+            <label>Origin (IATA)</label>
+            <input type="text" value={origin} onChange={(e) => setOrigin(e.target.value.toUpperCase())} placeholder="e.g., LHR" required />
           </div>
           <div className="form-group">
-            <label>Destination</label>
-            <input type="text" placeholder="e.g., MEL" value={destination} onChange={(e) => setDestination(e.target.value.toUpperCase())} maxLength={3} required />
+            <label>Destination (IATA)</label>
+            <input type="text" value={destination} onChange={(e) => setDestination(e.target.value.toUpperCase())} placeholder="e.g., JFK" required />
           </div>
         </div>
         <div className="form-row">
           <div className="form-group">
-            <label>Departure</label>
-            <input type="date" value={departure} onChange={(e) => setDeparture(e.target.value)} min={new Date().toISOString().split("T")[0]} required />
-          </div>
-          <div className="form-group">
-            <label>Return</label>
-            <input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} min={departure || new Date().toISOString().split("T")[0]} />
+            <label>Departure Date</label>
+            <input type="date" value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} required />
           </div>
         </div>
-        <div className="form-row">
-            <div className="form-group">
-                <label>Passengers</label>
-                <select value={passengers} onChange={(e) => setPassengers(parseInt(e.target.value))}>
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map(n => <option key={n} value={n}>{n}</option>)}
-                </select>
-            </div>
-            <div className="form-group">
-                <label>Class</label>
-                <select value={tripClass} onChange={(e) => setTripClass(e.target.value)}>
-                    <option value="Y">Economy</option>
-                    <option value="C">Business</option>
-                </select>
-            </div>
-            <div className="form-group">
-                <label>Currency</label>
-                <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                    <option value="usd">USD</option>
-                    <option value="eur">EUR</option>
-                    <option value="gbp">GBP</option>
-                </select>
-            </div>
-        </div>
-        <button type="submit" disabled={loading}>{loading ? "Searching..." : "Search Flights"}</button>
+        <button type="submit" disabled={loading}>
+          {loading ? "Searching..." : "Search Flights"}
+        </button>
       </form>
 
-      {searchStatus && <div className="search-status">{searchStatus}</div>}
       {error && <p className="error-text">{error}</p>}
 
       {flights.length > 0 && (
         <div className="results-container">
           <h3>Found {flights.length} Flights</h3>
           <div className="flights-list">
-            {flights.map((flight, index) => (
-              <div key={index} className="flight-card">
-                <div className="flight-header">
-                  <div className="airline">{flight.airline || "Multiple Airlines"}</div>
-                  <div className="price">{flight.price} {flight.currency}</div>
-                </div>
+            {flights.map((offer) => (
+              <div key={offer.id} className="flight-card">
                 <div className="flight-details">
+                  <div className="airline-logo">{offer.owner.name}</div>
                   <div className="route">
                     <div className="segment">
-                      <div className="city">{flight.origin}</div>
-                      <div className="time">{formatTime(flight.departure_at)}</div>
-                      <div className="date">{formatDate(flight.departure_at)}</div>
+                      <div className="city">{offer.slices[0].origin.iata_code}</div>
                     </div>
                     <div className="arrow">→</div>
                     <div className="segment">
-                      <div className="city">{flight.destination}</div>
-                      <div className="time">{flight.arrival_at ? formatTime(flight.arrival_at) : "--:--"}</div>
-                      <div className="date">{flight.arrival_at ? formatDate(flight.arrival_at) : "-"}</div>
+                      <div className="city">{offer.slices[0].destination.iata_code}</div>
                     </div>
                   </div>
+                </div>
+                <div className="booking-section">
+                  <div className="price">{offer.total_amount} <span>{offer.total_currency}</span></div>
+                  <button onClick={(e) => handleBooking(offer.id, e.target)} className="book-now-button">
+                    Book Now
+                  </button>
                 </div>
               </div>
             ))}
