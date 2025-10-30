@@ -1,0 +1,141 @@
+/* src/components/FlightResultsPage.css */
+
+.flight-results-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.flight-results-container h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.flights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.flight-card {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  transition: box-shadow 0.2s;
+}
+
+.flight-card:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+.flight-details {
+  flex: 3;
+}
+
+.itinerary {
+  margin-bottom: 1rem;
+}
+
+.itinerary:last-child {
+  margin-bottom: 0;
+}
+
+.itinerary strong {
+  font-size: 1.1rem;
+  color: #333;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.segment {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 0.25rem;
+}
+
+.segment .iata {
+  font-weight: 600;
+}
+
+.segment .airline {
+  font-style: italic;
+  margin-left: 0.5rem;
+  color: #777;
+  text-transform: capitalize;
+}
+
+.itinerary p {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0.5rem 0 0;
+}
+
+
+.booking-section {
+  flex: 1;
+  text-align: right;
+  border-left: 1px solid #eee;
+  padding-left: 1.5rem;
+}
+
+.price {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 0.25rem;
+}
+
+.price span {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #666;
+  margin-left: 0.25rem;
+}
+
+.book-now-button {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+}
+
+.book-now-button:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.book-now-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .flight-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .booking-section {
+    text-align: left;
+    border-left: none;
+    border-top: 1px solid #eee;
+    padding-left: 0;
+    padding-top: 1rem;
+    margin-top: 1rem;
+  }
+
+  .book-now-button {
+    width: auto;
+  }
+}
