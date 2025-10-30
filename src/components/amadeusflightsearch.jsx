@@ -1,13 +1,15 @@
-// src/components/AmadeusFlightSearch.jsx
+// src/components/amadeusflightsearch.jsx
+// NOTE: I am keeping the export name 'ManualFlightForm' to match your KoalaRoute import.
 
 import React, { useState } from "react";
 import AsyncSelect from "react-select/async";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../config.js"; // Make sure this is your backend URL
-import "./AmadeusFlightSearch.css";
+import { API_BASE_URL } from "../config.js"; 
+import "./AmadeusFlightSearch.css"; // Ensure you create this CSS file
 
-export default function AmadeusFlightSearch() {
-  const [origin, setOrigin] = useState(null); // Will be { value: 'LHR', label: 'London (LHR)' }
+// Renamed from AmadeusFlightSearch to ManualFlightForm to match your KoalaRoute import
+export default function ManualFlightForm() {
+  const [origin, setOrigin] = useState(null); 
   const [destination, setDestination] = useState(null);
   const [departureDate, setDepartureDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
@@ -16,11 +18,12 @@ export default function AmadeusFlightSearch() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  // 1. Function to call your /airport-search backend
+  // Function to call your /airport-search backend for autocomplete
   const loadAirportOptions = async (inputValue) => {
     if (inputValue.length < 2) return [];
 
     try {
+      // *** CORRECT AMADEUS ENDPOINT ***
       const res = await fetch(
         `${API_BASE_URL}/amadeus/airport-search?keyword=${inputValue}`
       );
@@ -28,18 +31,17 @@ export default function AmadeusFlightSearch() {
 
       const data = await res.json();
       
-      // Format the data for react-select
       return data.data.map((airport) => ({
         value: airport.iataCode,
         label: `${airport.address.cityName} - ${airport.name} (${airport.iataCode})`,
       }));
     } catch (err) {
       console.error(err);
-      return []; // Return empty on error
+      return []; 
     }
   };
 
-  // 2. Function to call your /flight-offers backend
+  // Function to call your /flight-offers backend
   const handleSearch = async (e) => {
     e.preventDefault();
     setError("");
@@ -60,6 +62,7 @@ export default function AmadeusFlightSearch() {
         adults: adults,
       };
 
+      // *** CORRECT AMADEUS ENDPOINT ***
       const res = await fetch(`${API_BASE_URL}/amadeus/flight-offers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -68,11 +71,11 @@ export default function AmadeusFlightSearch() {
 
       const data = await res.json();
       if (!res.ok) {
+        // Handle Amadeus specific errors
         throw new Error(data.error?.errors[0]?.detail || "No flights found.");
       }
 
-      // 3. Navigate to the results page with the flight data
-      // We pass both the list of flights (data) and the airline names (dictionaries)
+      // Navigate to the results page
       navigate("/flights/results", { 
         state: { 
           flights: data.data, 
@@ -89,7 +92,7 @@ export default function AmadeusFlightSearch() {
 
   return (
     <div className="flight-search-form">
-      <h2>Search Amadeus Flights</h2>
+      <h2>Search Flights with Amadeus</h2> {/* Updated Title */}
       <form onSubmit={handleSearch}>
         <div className="form-row">
           <div className="form-group">

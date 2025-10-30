@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Chat from "./Chat";
-import ManualFlightForm from "./ManualFlightForm";
+import ManualFlightForm from "./amadeusflightsearch"; // This is the correct import
 import ManualHotelForm from "./ManualHotelForm";
 import PriceAlert from "./PriceAlert";
 import TabNavigation from "./TabNavigation";
