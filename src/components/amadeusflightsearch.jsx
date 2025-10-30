@@ -1,11 +1,12 @@
+// src/components/AmadeusFlightSearch.jsx
 import React, { useState } from "react";
 import AsyncSelect from "react-select/async";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../config.js";
-import "./AmadeusFlightSearch.css";
+import { API_BASE_URL } from "../config.js"; 
+import "./AmadeusFlightSearch.css"; 
 
-export default function AmadeusFlightSearch() {
-  const [origin, setOrigin] = useState(null);
+export default function AmadeusFlightSearch() { 
+  const [origin, setOrigin] = useState(null); 
   const [destination, setDestination] = useState(null);
   const [departureDate, setDepartureDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
@@ -16,34 +17,36 @@ export default function AmadeusFlightSearch() {
 
   const loadAirportOptions = async (inputValue) => {
     if (inputValue.length < 2) return [];
-
+    
     try {
+      // THIS IS THE CORRECT URL
       const res = await fetch(
         `${API_BASE_URL}/airport-search?keyword=${inputValue}`
       );
 
       if (!res.ok) {
         console.error(`Server error: ${res.status}`);
-        return [];
+        return []; 
       }
-
+      
       const data = await res.json();
 
       if (!data.data || !Array.isArray(data.data)) {
         console.error("Amadeus API did not return valid airport data:", data);
-        return [];
+        return []; 
       }
 
       return data.data.map((airport) => ({
         value: airport.iataCode,
         label: `${airport.address.cityName} - ${airport.name} (${airport.iataCode})`,
       }));
+
     } catch (err) {
       console.error("Airport search fetch failed:", err);
-      return [];
+      return []; 
     }
   };
-
+  
   const handleSearch = async (e) => {
     e.preventDefault();
     setError("");
@@ -64,6 +67,7 @@ export default function AmadeusFlightSearch() {
         adults: adults,
       };
 
+      // THIS IS THE CORRECT URL
       const res = await fetch(`${API_BASE_URL}/flight-offers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -75,12 +79,13 @@ export default function AmadeusFlightSearch() {
         throw new Error(data.errors?.[0]?.detail || "No flights found.");
       }
 
-      navigate("/flights/results", {
-        state: {
-          flights: data.data,
-          dictionaries: data.dictionaries,
-        },
+      navigate("/flights/results", { 
+        state: { 
+          flights: data.data, 
+          dictionaries: data.dictionaries 
+        } 
       });
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -99,13 +104,11 @@ export default function AmadeusFlightSearch() {
               cacheOptions
               defaultOptions
               loadOptions={loadAirportOptions}
-              value={origin}                  // ✅ keeps selection visible
               onChange={setOrigin}
               placeholder="City or Airport (e.g., SYD)"
               className="react-select-container"
               classNamePrefix="react-select"
-              noOptionsMessage={() => null}
-              isClearable={false}
+              noOptionsMessage={() => null} // Hides "No options"
             />
           </div>
           <div className="form-group">
@@ -114,13 +117,11 @@ export default function AmadeusFlightSearch() {
               cacheOptions
               defaultOptions
               loadOptions={loadAirportOptions}
-              value={destination}             // ✅ keeps selection visible
               onChange={setDestination}
               placeholder="City or Airport (e.g., LHR)"
               className="react-select-container"
               classNamePrefix="react-select"
-              noOptionsMessage={() => null}
-              isClearable={false}
+              noOptionsMessage={() => null} // Hides "No options"
             />
           </div>
         </div>
@@ -158,7 +159,7 @@ export default function AmadeusFlightSearch() {
             />
           </div>
         </div>
-
+        
         <button type="submit" disabled={loading}>
           {loading ? "Searching..." : "Search Flights"}
         </button>
