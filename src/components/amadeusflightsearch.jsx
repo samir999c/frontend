@@ -1,13 +1,13 @@
 // src/components/amadeusflightsearch.jsx
-// NOTE: I am keeping the export name 'ManualFlightForm' to match your KoalaRoute import.
+// This is the correct Amadeus code.
+// It exports 'ManualFlightForm' to match your KoalaRoute.jsx import.
 
 import React, { useState } from "react";
 import AsyncSelect from "react-select/async";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config.js"; 
-import "./AmadeusFlightSearch.css"; // Ensure you create this CSS file
+import "./AmadeusFlightSearch.css"; // We created this file
 
-// Renamed from AmadeusFlightSearch to ManualFlightForm to match your KoalaRoute import
 export default function ManualFlightForm() {
   const [origin, setOrigin] = useState(null); 
   const [destination, setDestination] = useState(null);
@@ -62,7 +62,8 @@ export default function ManualFlightForm() {
         adults: adults,
       };
 
-      // *** CORRECT AMADEUS ENDPOINT ***
+      // *** THIS IS THE CORRECT API CALL ***
+      // *** IT DOES NOT SAY /duffel/search ***
       const res = await fetch(`${API_BASE_URL}/amadeus/flight-offers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -92,7 +93,7 @@ export default function ManualFlightForm() {
 
   return (
     <div className="flight-search-form">
-      <h2>Search Flights with Amadeus</h2> {/* Updated Title */}
+      <h2>Search Flights with Amadeus</h2>
       <form onSubmit={handleSearch}>
         <div className="form-row">
           <div className="form-group">
