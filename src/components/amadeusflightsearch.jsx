@@ -102,3 +102,104 @@ export default function AmadeusFlightSearch() {
 
     // ensure manual typed codes are accepted if user never blurred the field
     if (!origin && originInput) {
+      acceptManualIataIfValid(originInput, setOrigin, setOriginInput);
+    }
+    if (!destination && destinationInput) {
+      acceptManualIataIfValid(destinationInput, setDestination, setDestinationInput);
+    }
+
+    // basic validation
+    if ((!origin && !originInput) || (!destination && !destinationInput)) {
+      setError("Please provide both origin and destination airports.");
+      return;
+    }
+    if (!departureDate) {
+      setError("Please select a departure date.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        origin: (origin ?? optionCacheRef.current.get(originInput?.toUpperCase()))?.value ?? originInput?.toUpperCase() ?? "",
+        destination: (destination ?? optionCacheRef.current.get(destinationInput?.toUpperCase()))?.value ?? destinationInput?.toUpperCase() ?? "",
+        departureDate,
+        adults: String(adults || 1),
+      });
+      if (returnDate) params.set("returnDate", returnDate);
+
+      // Navigate to a results page (adjust path as needed)
+      navigate(`/results?${params.toString()}`);
+    } catch (err) {
+      console.error("Search failed:", err);
+      setError("Search failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form className="amadeus-search" onSubmit={handleSearch}>
+      <div className="field-row">
+        <label>Origin</label>
+        <AsyncSelect
+          cacheOptions
+          defaultOptions
+          loadOptions={loadAirportOptions}
+          value={origin}
+          onChange={(opt) => {
+            setOrigin(opt);
+            setOriginInput(opt?.label ?? "");
+          }}
+          onInputChange={(val) => setOriginInput(val)}
+          onBlur={() => acceptManualIataIfValid(originInput, setOrigin, setOriginInput)}
+          getOptionLabel={getOptionLabel}
+          getOptionValue={getOptionValue}
+          placeholder="City or 3-letter IATA"
+        />
+      </div>
+
+      <div className="field-row">
+        <label>Destination</label>
+        <AsyncSelect
+          cacheOptions
+          defaultOptions
+          loadOptions={loadAirportOptions}
+          value={destination}
+          onChange={(opt) => {
+            setDestination(opt);
+            setDestinationInput(opt?.label ?? "");
+          }}
+          onInputChange={(val) => setDestinationInput(val)}
+          onBlur={() => acceptManualIataIfValid(destinationInput, setDestination, setDestinationInput)}
+          getOptionLabel={getOptionLabel}
+          getOptionValue={getOptionValue}
+          placeholder="City or 3-letter IATA"
+        />
+      </div>
+
+      <div className="field-row">
+        <label>Departure</label>
+        <input type="date" value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} />
+      </div>
+
+      <div className="field-row">
+        <label>Return (optional)</label>
+        <input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} />
+      </div>
+
+      <div className="field-row">
+        <label>Adults</label>
+        <input type="number" min="1" value={adults} onChange={(e) => setAdults(Math.max(1, Number(e.target.value) || 1))} />
+      </div>
+
+      {error && <div className="error">{error}</div>}
+
+      <div className="actions">
+        <button type="submit" disabled={loading}>
+          {loading ? "Searching..." : "Search Flights"}
+        </button>
+      </div>
+    </form>
+  );
+}
