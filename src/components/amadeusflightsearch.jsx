@@ -1,14 +1,12 @@
 // src/components/AmadeusFlightSearch.jsx
-// This file is now correctly imported by KoalaRoute.jsx
+// This is the FINAL, CORRECTED version with the 404 fix.
 
 import React, { useState } from "react";
 import AsyncSelect from "react-select/async";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config.js"; 
-import "./AmadeusFlightSearch.css"; // This import is correct (capitalized)
+import "./AmadeusFlightSearch.css"; 
 
-// Your KoalaRoute imports this file as "ManualFlightForm", 
-// so the export name doesn't matter, but the file name does.
 export default function AmadeusFlightSearch() { 
   const [origin, setOrigin] = useState(null); 
   const [destination, setDestination] = useState(null);
@@ -20,50 +18,39 @@ export default function AmadeusFlightSearch() {
   const navigate = useNavigate();
 
   // ===================================================================
-  //  THIS IS THE CRITICALLY FIXED FUNCTION
-  //  It now properly handles all backend/API errors
+  //  THE 404 FIX
   // ===================================================================
   const loadAirportOptions = async (inputValue) => {
-    if (inputValue.length < 2) {
-      return [];
-    }
+    if (inputValue.length < 2) return [];
     
     try {
+      // *** URL FIXED: Removed /amadeus prefix ***
       const res = await fetch(
-        `${API_BASE_URL}/amadeus/airport-search?keyword=${inputValue}`
+        `${API_BASE_URL}/airport-search?keyword=${inputValue}`
       );
 
-      // 1. Check for server errors (e.g., 500, 404, 401 from your backend)
       if (!res.ok) {
         console.error(`Server error: ${res.status}`);
-        return []; // Return empty on server error
+        return []; 
       }
       
       const data = await res.json();
 
-      // 2. Check for Amadeus errors (e.g., bad token, Amadeus API down)
-      // If 'data.data' doesn't exist, it's an error structure.
       if (!data.data || !Array.isArray(data.data)) {
         console.error("Amadeus API did not return valid airport data:", data);
-        return []; // Return empty on bad data structure
+        return []; 
       }
 
-      // 3. This is the only successful path
       return data.data.map((airport) => ({
         value: airport.iataCode,
         label: `${airport.address.cityName} - ${airport.name} (${airport.iataCode})`,
       }));
 
     } catch (err) {
-      // 4. This catches network failures or CORS errors (check console!)
       console.error("Airport search fetch failed:", err);
-      return []; // Always return an empty array on any failure
+      return []; 
     }
   };
-
-  // ===================================================================
-  //  (This function below is fine)
-  // ===================================================================
   
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -85,7 +72,8 @@ export default function AmadeusFlightSearch() {
         adults: adults,
       };
 
-      const res = await fetch(`${API_BASE_URL}/amadeus/flight-offers`, {
+      // *** URL FIXED: Removed /amadeus prefix ***
+      const res = await fetch(`${API_BASE_URL}/flight-offers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(searchParams),
@@ -111,6 +99,7 @@ export default function AmadeusFlightSearch() {
   };
 
   return (
+    // ... your JSX return statement is fine, no changes needed ...
     <div className="flight-search-form">
       <h2>Search Flights with Amadeus</h2>
       <form onSubmit={handleSearch}>

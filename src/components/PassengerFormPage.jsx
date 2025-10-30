@@ -1,18 +1,17 @@
 // src/components/PassengerFormPage.jsx
+// This is the FINAL, CORRECTED version with the 404 fix.
 
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config.js';
-import './PassengerFormPage.css'; // We will create this CSS file next
+import './PassengerFormPage.css'; 
 
 export default function PassengerFormPage() {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // 1. Get the pricedOffer from the previous page (FlightResultsPage)
   const { pricedOffer } = location.state || {};
 
-  // We only have one traveler form for now, as the backend supports one traveler
   const [traveler, setTraveler] = useState({
     id: '1',
     dateOfBirth: '',
@@ -29,7 +28,6 @@ export default function PassengerFormPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Handle input changes for the traveler
   const handleChange = (e) => {
     const { name, value } = e.target;
     setTraveler((prev) => ({
@@ -38,7 +36,6 @@ export default function PassengerFormPage() {
     }));
   };
 
-  // 3. This function calls your /book backend endpoint
   const handleBooking = async (e) => {
     e.preventDefault();
     setError('');
@@ -51,13 +48,16 @@ export default function PassengerFormPage() {
     setLoading(true);
 
     try {
-      // Structure the data exactly as your backend /book endpoint expects
       const bookingData = {
         flightOffer: pricedOffer,
         travelerInfo: traveler,
       };
 
-      const res = await fetch(`${API_BASE_URL}/amadeus/book`, {
+      // =============================================
+      //  THE 404 FIX
+      //  URL Changed: Removed /amadeus prefix
+      // =============================================
+      const res = await fetch(`${API_BASE_URL}/book`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bookingData),
@@ -66,13 +66,10 @@ export default function PassengerFormPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        // Try to show a useful error from Amadeus
         const amadeusError = data.error?.errors?.[0]?.detail || data.msg || 'Booking failed.';
         throw new Error(amadeusError);
       }
       
-      // 4. SUCCESS! Navigate to the confirmation page
-      // We pass the new order ID from the response
       const orderId = data.data.id;
       navigate(`/flights/confirm/${orderId}`, { state: { bookingResponse: data.data } });
 
@@ -93,7 +90,6 @@ export default function PassengerFormPage() {
     );
   }
 
-  // Display a summary of the flight being booked
   const { itineraries, price } = pricedOffer;
 
   return (
