@@ -1,14 +1,15 @@
-// src/components/amadeusflightsearch.jsx
-// This is the correct Amadeus code.
-// It exports 'ManualFlightForm' to match your KoalaRoute.jsx import.
+// src/components/AmadeusFlightSearch.jsx
+// This file is now correctly imported by KoalaRoute.jsx
 
 import React, { useState } from "react";
 import AsyncSelect from "react-select/async";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config.js"; 
-import "./AmadeusFlightSearch.css"; // We created this file
+import "./AmadeusFlightSearch.css"; // This import is correct (capitalized)
 
-export default function ManualFlightForm() {
+// Your KoalaRoute imports this file as "ManualFlightForm", 
+// so the export name doesn't matter, but the file name does.
+export default function AmadeusFlightSearch() { 
   const [origin, setOrigin] = useState(null); 
   const [destination, setDestination] = useState(null);
   const [departureDate, setDepartureDate] = useState("");
@@ -18,30 +19,52 @@ export default function ManualFlightForm() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  // Function to call your /airport-search backend for autocomplete
+  // ===================================================================
+  //  THIS IS THE CRITICALLY FIXED FUNCTION
+  //  It now properly handles all backend/API errors
+  // ===================================================================
   const loadAirportOptions = async (inputValue) => {
-    if (inputValue.length < 2) return [];
-
+    if (inputValue.length < 2) {
+      return [];
+    }
+    
     try {
-      // *** CORRECT AMADEUS ENDPOINT ***
       const res = await fetch(
         `${API_BASE_URL}/amadeus/airport-search?keyword=${inputValue}`
       );
-      if (!res.ok) throw new Error("Failed to fetch airports");
 
-      const data = await res.json();
+      // 1. Check for server errors (e.g., 500, 404, 401 from your backend)
+      if (!res.ok) {
+        console.error(`Server error: ${res.status}`);
+        return []; // Return empty on server error
+      }
       
+      const data = await res.json();
+
+      // 2. Check for Amadeus errors (e.g., bad token, Amadeus API down)
+      // If 'data.data' doesn't exist, it's an error structure.
+      if (!data.data || !Array.isArray(data.data)) {
+        console.error("Amadeus API did not return valid airport data:", data);
+        return []; // Return empty on bad data structure
+      }
+
+      // 3. This is the only successful path
       return data.data.map((airport) => ({
         value: airport.iataCode,
         label: `${airport.address.cityName} - ${airport.name} (${airport.iataCode})`,
       }));
+
     } catch (err) {
-      console.error(err);
-      return []; 
+      // 4. This catches network failures or CORS errors (check console!)
+      console.error("Airport search fetch failed:", err);
+      return []; // Always return an empty array on any failure
     }
   };
 
-  // Function to call your /flight-offers backend
+  // ===================================================================
+  //  (This function below is fine)
+  // ===================================================================
+  
   const handleSearch = async (e) => {
     e.preventDefault();
     setError("");
@@ -62,8 +85,6 @@ export default function ManualFlightForm() {
         adults: adults,
       };
 
-      // *** THIS IS THE CORRECT API CALL ***
-      // *** IT DOES NOT SAY /duffel/search ***
       const res = await fetch(`${API_BASE_URL}/amadeus/flight-offers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -72,11 +93,9 @@ export default function ManualFlightForm() {
 
       const data = await res.json();
       if (!res.ok) {
-        // Handle Amadeus specific errors
-        throw new Error(data.error?.errors[0]?.detail || "No flights found.");
+        throw new Error(data.errors?.[0]?.detail || "No flights found.");
       }
 
-      // Navigate to the results page
       navigate("/flights/results", { 
         state: { 
           flights: data.data, 
