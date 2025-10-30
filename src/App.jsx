@@ -8,7 +8,6 @@ import KoalaRoute from "./components/KoalaRoute";
 // --- NEW IMPORTS for Amadeus Booking Flow ---
 import FlightResultsPage from "./components/FlightResultsPage";
 import PassengerFormPage from "./components/PassengerFormPage";
-import PaymentConfirmationPage from "./components/PaymentConfirmationPage";
 import BookingConfirmationPage from "./components/BookingConfirmationPage";
 // ---------------------------------------------
 
@@ -22,7 +21,6 @@ export default function App() {
         {/* --- NEW AMADEUS BOOKING FLOW ROUTES --- */}
         <Route path="/flights/results" element={<FlightResultsPage />} />
         <Route path="/flights/passengers" element={<PassengerFormPage />} />
-        <Route path="/flights/payment" element={<PaymentConfirmationPage />} />
         <Route path="/flights/confirm/:orderId" element={<BookingConfirmationPage />} />
         {/* -------------------------------------- */}
 
