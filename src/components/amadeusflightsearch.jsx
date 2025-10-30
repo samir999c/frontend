@@ -1,6 +1,3 @@
-// src/components/AmadeusFlightSearch.jsx
-// This is the FINAL, CORRECTED version with the 404 fix.
-
 import React, { useState } from "react";
 import AsyncSelect from "react-select/async";
 import { useNavigate } from "react-router-dom";
@@ -17,14 +14,10 @@ export default function AmadeusFlightSearch() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  // ===================================================================
-  //  THE 404 FIX
-  // ===================================================================
   const loadAirportOptions = async (inputValue) => {
     if (inputValue.length < 2) return [];
     
     try {
-      // *** URL FIXED: Removed /amadeus prefix ***
       const res = await fetch(
         `${API_BASE_URL}/airport-search?keyword=${inputValue}`
       );
@@ -72,7 +65,6 @@ export default function AmadeusFlightSearch() {
         adults: adults,
       };
 
-      // *** URL FIXED: Removed /amadeus prefix ***
       const res = await fetch(`${API_BASE_URL}/flight-offers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,7 +91,6 @@ export default function AmadeusFlightSearch() {
   };
 
   return (
-    // ... your JSX return statement is fine, no changes needed ...
     <div className="flight-search-form">
       <h2>Search Flights with Amadeus</h2>
       <form onSubmit={handleSearch}>
@@ -114,6 +105,7 @@ export default function AmadeusFlightSearch() {
               placeholder="City or Airport (e.g., SYD)"
               className="react-select-container"
               classNamePrefix="react-select"
+              noOptionsMessage={() => null} 
             />
           </div>
           <div className="form-group">
@@ -126,6 +118,7 @@ export default function AmadeusFlightSearch() {
               placeholder="City or Airport (e.g., LHR)"
               className="react-select-container"
               classNamePrefix="react-select"
+              noOptionsMessage={() => null} 
             />
           </div>
         </div>
