@@ -1,157 +1,28 @@
 /* src/components/PassengerFormPage.css */
-
-.passenger-form-container {
-  display: flex;
-  max-width: 1100px;
-  margin: 2rem auto;
-  gap: 2rem;
-  padding: 0 1rem;
-}
-
-.flight-summary-sidebar {
-  flex: 1;
-  background: #f9f9f9;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1.5rem;
-  height: fit-content; /* Makes it stick to the top */
-}
-
-.flight-summary-sidebar h3 {
-  margin-top: 0;
-  border-bottom: 2px solid #eee;
-  padding-bottom: 0.5rem;
-}
-
-.summary-itinerary {
-  margin-bottom: 1rem;
-}
-
-.summary-itinerary strong {
-  font-size: 1.1rem;
-  color: #333;
-}
-
-.summary-segment {
-  font-size: 0.95rem;
-  color: #555;
-  margin: 0.5rem 0;
-}
-
-.summary-price {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 1.2rem;
-  margin-top: 1rem;
-}
-
-.summary-price strong {
-  font-size: 1.5rem;
-  color: #000;
-}
-
-
-.passenger-form {
-  flex: 2;
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 2rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.passenger-form h2,
-.passenger-form h3 {
-  margin-top: 0;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #eee;
-}
-
-.passenger-form h3 {
-  font-size: 1.25rem;
-  margin-top: 2rem;
-}
-
-.form-row {
-  display: flex;
-  gap: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-.form-group {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.form-group.full-width {
-  flex-basis: 100%;
-}
-
-.form-group label {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: #555;
-}
-
-.form-group input,
-.form-group select {
-  padding: 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-family: inherit;
-}
-
-.book-now-button {
-  width: 100%;
-  padding: 0.85rem;
-  font-size: 1.1rem;
-  font-weight: 700;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  margin-top: 1.5rem;
-}
-
-.book-now-button:hover:not(:disabled) {
-  background-color: #218838;
-}
-
-.book-now-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.error-text {
-  color: #d93025;
-  text-align: center;
-  margin-top: 1rem;
-  background: #fbeae9;
-  padding: 0.75rem;
-  border-radius: 6px;
-  border: 1px solid #d93025;
-}
-
-/* Responsive */
+.passenger-form-container { display: flex; max-width: 1100px; margin: 2rem auto; gap: 2rem; padding: 0 1rem; }
+.flight-summary-sidebar { flex: 1; background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; height: fit-content; }
+.flight-summary-sidebar h3 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
+.summary-itinerary { margin-bottom: 1rem; }
+.summary-itinerary strong { font-size: 1.1rem; color: #333; }
+.summary-segment { font-size: 0.95rem; color: #555; margin: 0.5rem 0; }
+.summary-price { display: flex; justify-content: space-between; align-items: center; font-size: 1.2rem; margin-top: 1rem; }
+.summary-price strong { font-size: 1.5rem; color: #000; }
+.passenger-form { flex: 2; background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 2rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+.passenger-form h2, .passenger-form h3 { margin-top: 0; margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eee; }
+.passenger-form h3 { font-size: 1.25rem; margin-top: 2rem; }
+.form-row { display: flex; gap: 1.5rem; margin-bottom: 1rem; }
+.form-group { flex: 1; display: flex; flex-direction: column; }
+.form-group.full-width { flex-basis: 100%; }
+.form-group label { font-weight: 600; margin-bottom: 0.5rem; color: #555; }
+.form-group input, .form-group select { padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; font-family: inherit; }
+.book-now-button { width: 100%; padding: 0.85rem; font-size: 1.1rem; font-weight: 700; background-color: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; margin-top: 1.5rem; }
+.book-now-button:hover:not(:disabled) { background-color: #218838; }
+.book-now-button:disabled { background-color: #ccc; cursor: not-allowed; }
+.error-text { color: #d93025; text-align: center; margin-top: 1rem; background: #fbeae9; padding: 0.75rem; border-radius: 6px; border: 1px solid #d93025; }
 @media (max-width: 900px) {
-  .passenger-form-container {
-    flex-direction: column;
-  }
-  
-  .flight-summary-sidebar {
-    order: -1; /* Show summary on top on mobile */
-  }
+  .passenger-form-container { flex-direction: column; }
+  .flight-summary-sidebar { order: -1; }
 }
-
 @media (max-width: 600px) {
-  .form-row {
-    flex-direction: column;
-    gap: 1rem;
-  }
+  .form-row { flex-direction: column; gap: 1rem; }
 }
