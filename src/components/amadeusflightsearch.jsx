@@ -1,17 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import AsyncSelect from "react-select/async";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config.js";
 import "./AmadeusFlightSearch.css";
-
-/**
- * Improved AmadeusFlightSearch
- * - Controlled AsyncSelect
- * - Accepts manual 3-letter IATA codes (on blur)
- * - Caches loaded options so selected labels persist
- */
-
-const IATA_RE = /^[A-Za-z]{3}$/;
 
 export default function AmadeusFlightSearch() {
   const [origin, setOrigin] = useState(null);
@@ -21,78 +12,35 @@ export default function AmadeusFlightSearch() {
   const [adults, setAdults] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // input text state to allow manual-typed codes to be accepted on blur
-  const [originInput, setOriginInput] = useState("");
-  const [destinationInput, setDestinationInput] = useState("");
-
-  // local cache map: iataCode -> option { value, label }
-  const optionCacheRef = useRef(new Map());
-
   const navigate = useNavigate();
 
-  // helper to normalize option objects and cache them
-  const normalizeAndCache = (airport) => {
-    const opt = {
-      value: airport.iataCode,
-      label: `${airport.address?.cityName ?? airport.city ?? "Unknown"} - ${airport.name ?? airport.airport ?? airport.iataCode} (${airport.iataCode})`,
-      raw: airport,
-    };
-    optionCacheRef.current.set(opt.value, opt);
-    return opt;
-  };
-
-  // load options for AsyncSelect
   const loadAirportOptions = async (inputValue) => {
-    // if user typed exactly 3 letters, we can attempt to return cached option too
-    if (!inputValue || inputValue.length < 2) {
-      // return cached top picks (small array) if any
-      return Array.from(optionCacheRef.current.values()).slice(0, 8);
-    }
+    if (inputValue.length < 2) return [];
 
     try {
-      const res = await fetch(`${API_BASE_URL}/airport-search?keyword=${encodeURIComponent(inputValue)}`);
+      const res = await fetch(
+        `${API_BASE_URL}/airport-search?keyword=${inputValue}`
+      );
+
       if (!res.ok) {
-        console.error("Airport search server error:", res.status);
+        console.error(`Server error: ${res.status}`);
         return [];
       }
 
       const data = await res.json();
-      if (!data?.data || !Array.isArray(data.data)) {
-        console.error("Unexpected airport data shape:", data);
+
+      if (!data.data || !Array.isArray(data.data)) {
+        console.error("Amadeus API did not return valid airport data:", data);
         return [];
       }
 
-      const options = data.data.map(normalizeAndCache);
-      return options;
+      return data.data.map((airport) => ({
+        value: airport.iataCode,
+        label: `${airport.address.cityName} - ${airport.name} (${airport.iataCode})`,
+      }));
     } catch (err) {
       console.error("Airport search fetch failed:", err);
       return [];
-    }
-  };
-
-  // explicit getOptionLabel / getOptionValue so react-select knows what to render and compare
-  const getOptionLabel = (opt) => (typeof opt === "string" ? opt : opt?.label ?? opt?.value ?? "");
-  const getOptionValue = (opt) => (typeof opt === "string" ? opt : opt?.value ?? "");
-
-  // If user typed an IATA code but didn't select from menu, accept it on blur
-  const acceptManualIataIfValid = (inputText, setter, setInputState) => {
-    if (!inputText) return;
-    const code = inputText.trim().toUpperCase();
-    if (IATA_RE.test(code)) {
-      // if we have cached metadata, use that label; otherwise create a simple label
-      const cached = optionCacheRef.current.get(code);
-      const opt = cached ?? { value: code, label: `${code} (manual) - Unknown airport` };
-      // cache the manual one so it persists
-      optionCacheRef.current.set(code, opt);
-      setter(opt);
-      setInputState(opt.label); // keep input text in sync with label (optional)
-    } else {
-      // not a valid IATA — clear the field (or keep typed text if you prefer)
-      // here we clear selection but keep the typed string visible
-      console.warn("Manual airport input is not a 3-letter IATA code:", inputText);
-      // don't override setter if you want to keep typed string; keeping selection as null
-      setter(null);
     }
   };
 
@@ -100,106 +48,122 @@ export default function AmadeusFlightSearch() {
     e.preventDefault();
     setError("");
 
-    // ensure manual typed codes are accepted if user never blurred the field
-    if (!origin && originInput) {
-      acceptManualIataIfValid(originInput, setOrigin, setOriginInput);
-    }
-    if (!destination && destinationInput) {
-      acceptManualIataIfValid(destinationInput, setDestination, setDestinationInput);
-    }
-
-    // basic validation
-    if ((!origin && !originInput) || (!destination && !destinationInput)) {
-      setError("Please provide both origin and destination airports.");
-      return;
-    }
-    if (!departureDate) {
-      setError("Please select a departure date.");
+    if (!origin || !destination || !departureDate || !adults) {
+      setError("Please fill in Origin, Destination, Departure Date, and Adults.");
       return;
     }
 
     setLoading(true);
-    try {
-      const params = new URLSearchParams({
-        origin: (origin ?? optionCacheRef.current.get(originInput?.toUpperCase()))?.value ?? originInput?.toUpperCase() ?? "",
-        destination: (destination ?? optionCacheRef.current.get(destinationInput?.toUpperCase()))?.value ?? destinationInput?.toUpperCase() ?? "",
-        departureDate,
-        adults: String(adults || 1),
-      });
-      if (returnDate) params.set("returnDate", returnDate);
 
-      // Navigate to a results page (adjust path as needed)
-      navigate(`/results?${params.toString()}`);
+    try {
+      const searchParams = {
+        origin: origin.value,
+        destination: destination.value,
+        departureDate: departureDate,
+        returnDate: returnDate || null,
+        adults: adults,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/flight-offers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(searchParams),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.errors?.[0]?.detail || "No flights found.");
+      }
+
+      navigate("/flights/results", {
+        state: {
+          flights: data.data,
+          dictionaries: data.dictionaries,
+        },
+      });
     } catch (err) {
-      console.error("Search failed:", err);
-      setError("Search failed. Please try again.");
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form className="amadeus-search" onSubmit={handleSearch}>
-      <div className="field-row">
-        <label>Origin</label>
-        <AsyncSelect
-          cacheOptions
-          defaultOptions
-          loadOptions={loadAirportOptions}
-          value={origin}
-          onChange={(opt) => {
-            setOrigin(opt);
-            setOriginInput(opt?.label ?? "");
-          }}
-          onInputChange={(val) => setOriginInput(val)}
-          onBlur={() => acceptManualIataIfValid(originInput, setOrigin, setOriginInput)}
-          getOptionLabel={getOptionLabel}
-          getOptionValue={getOptionValue}
-          placeholder="City or 3-letter IATA"
-        />
-      </div>
+    <div className="flight-search-form">
+      <h2>Search Flights with Amadeus</h2>
+      <form onSubmit={handleSearch}>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Origin</label>
+            <AsyncSelect
+              cacheOptions
+              defaultOptions
+              loadOptions={loadAirportOptions}
+              value={origin}                  // ✅ keeps selection visible
+              onChange={setOrigin}
+              placeholder="City or Airport (e.g., SYD)"
+              className="react-select-container"
+              classNamePrefix="react-select"
+              noOptionsMessage={() => null}
+              isClearable={false}
+            />
+          </div>
+          <div className="form-group">
+            <label>Destination</label>
+            <AsyncSelect
+              cacheOptions
+              defaultOptions
+              loadOptions={loadAirportOptions}
+              value={destination}             // ✅ keeps selection visible
+              onChange={setDestination}
+              placeholder="City or Airport (e.g., LHR)"
+              className="react-select-container"
+              classNamePrefix="react-select"
+              noOptionsMessage={() => null}
+              isClearable={false}
+            />
+          </div>
+        </div>
 
-      <div className="field-row">
-        <label>Destination</label>
-        <AsyncSelect
-          cacheOptions
-          defaultOptions
-          loadOptions={loadAirportOptions}
-          value={destination}
-          onChange={(opt) => {
-            setDestination(opt);
-            setDestinationInput(opt?.label ?? "");
-          }}
-          onInputChange={(val) => setDestinationInput(val)}
-          onBlur={() => acceptManualIataIfValid(destinationInput, setDestination, setDestinationInput)}
-          getOptionLabel={getOptionLabel}
-          getOptionValue={getOptionValue}
-          placeholder="City or 3-letter IATA"
-        />
-      </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Departure Date</label>
+            <input
+              type="date"
+              value={departureDate}
+              onChange={(e) => setDepartureDate(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Return Date (Optional)</label>
+            <input
+              type="date"
+              value={returnDate}
+              onChange={(e) => setReturnDate(e.target.value)}
+            />
+          </div>
+        </div>
 
-      <div className="field-row">
-        <label>Departure</label>
-        <input type="date" value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} />
-      </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Adults</label>
+            <input
+              type="number"
+              min="1"
+              max="9"
+              value={adults}
+              onChange={(e) => setAdults(e.target.value)}
+              required
+            />
+          </div>
+        </div>
 
-      <div className="field-row">
-        <label>Return (optional)</label>
-        <input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} />
-      </div>
-
-      <div className="field-row">
-        <label>Adults</label>
-        <input type="number" min="1" value={adults} onChange={(e) => setAdults(Math.max(1, Number(e.target.value) || 1))} />
-      </div>
-
-      {error && <div className="error">{error}</div>}
-
-      <div className="actions">
         <button type="submit" disabled={loading}>
           {loading ? "Searching..." : "Search Flights"}
         </button>
-      </div>
-    </form>
+        {error && <p className="error-text">{error}</p>}
+      </form>
+    </div>
   );
 }
