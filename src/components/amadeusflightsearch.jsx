@@ -24,9 +24,9 @@ export default function AmadeusFlightSearch() {
     try {
       const cacheBust = new Date().getTime();
       
-      // --- URL FIX: REMOVED /api prefix ---
+      // --- URL FIX: Added /api prefix BACK ---
       const res = await fetch(
-        `${API_BASE_URL}/airport-search?keyword=${inputValue}&_cacheBust=${cacheBust}`
+        `${API_BASE_URL}/api/airport-search?keyword=${inputValue}&_cacheBust=${cacheBust}`
       );
       
       if (!res.ok) {
@@ -67,8 +67,8 @@ export default function AmadeusFlightSearch() {
         travelClass: travelClass,
       };
       
-      // --- URL FIX: REMOVED /api prefix ---
-      const res = await fetch(`${API_BASE_URL}/flight-offers`, {
+      // --- URL FIX: Added /api prefix BACK ---
+      const res = await fetch(`${API_BASE_URL}/api/flight-offers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(searchParams),
@@ -91,7 +91,7 @@ export default function AmadeusFlightSearch() {
     }
   };
 
-  // --- Return JSX (No changes here) ---
+  // --- Return JSX (No changes) ---
   return (
     <div className="flight-search-form">
       <h2>Search Flights with Amadeus</h2>
