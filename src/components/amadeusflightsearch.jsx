@@ -1,10 +1,8 @@
-// src/components/AmadeusFlightSearch.jsx
-
 import React, { useState } from "react";
 import AsyncSelect from "react-select/async";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config.js"; 
-import "./AmadeusFlightSearch.css"; // We'll update this CSS file too
+import "./AmadeusFlightSearch.css";
 
 export default function AmadeusFlightSearch() { 
   const [origin, setOrigin] = useState(null); 
@@ -27,8 +25,9 @@ export default function AmadeusFlightSearch() {
     if (inputValue.length < 2) return [];
     try {
       const cacheBust = new Date().getTime();
+      // --- URL FIX: Added /api prefix ---
       const res = await fetch(
-        `${API_BASE_URL}/airport-search?keyword=${inputValue}&_cacheBust=${cacheBust}`
+        `${API_BASE_URL}/api/airport-search?keyword=${inputValue}&_cacheBust=${cacheBust}`
       );
       if (!res.ok) {
         console.error(`Server error: ${res.status}`);
@@ -74,7 +73,8 @@ export default function AmadeusFlightSearch() {
       };
       // ---------------------------------
 
-      const res = await fetch(`${API_BASE_URL}/flight-offers`, {
+      // --- URL FIX: Added /api prefix ---
+      const res = await fetch(`${API_BASE_URL}/api/flight-offers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(searchParams),
