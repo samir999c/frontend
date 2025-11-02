@@ -1,48 +1,46 @@
 // src/components/AmadeusFlightSearch.jsx
-
 import React, { useState } from "react";
 import AsyncSelect from "react-select/async";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config.js"; 
-import "./AmadeusFlightSearch.css"; // We'll update this CSS file too
+import "./AmadeusFlightSearch.css"; 
 
 export default function AmadeusFlightSearch() { 
   const [origin, setOrigin] = useState(null); 
   const [destination, setDestination] = useState(null);
   const [departureDate, setDepartureDate] = useState("");
-  
-  // --- NEW STATE VARIABLES ---
-  const [tripType, setTripType] = useState("ROUND_TRIP"); // ROUND_TRIP or ONE_WAY
   const [returnDate, setReturnDate] = useState("");
   const [adults, setAdults] = useState(1);
-  const [children, setChildren] = useState(0);
-  const [travelClass, setTravelClass] = useState("ECONOMY"); // ECONOMY, BUSINESS, FIRST
-  // ---------------------------
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const loadAirportOptions = async (inputValue) => {
     if (inputValue.length < 2) return [];
+    
     try {
-      const cacheBust = new Date().getTime();
+      // THIS IS THE CORRECT URL
       const res = await fetch(
-        `${API_BASE_URL}/airport-search?keyword=${inputValue}&_cacheBust=${cacheBust}`
+        `${API_BASE_URL}/airport-search?keyword=${inputValue}`
       );
+
       if (!res.ok) {
         console.error(`Server error: ${res.status}`);
         return []; 
       }
+      
       const data = await res.json();
+
       if (!data.data || !Array.isArray(data.data)) {
         console.error("Amadeus API did not return valid airport data:", data);
         return []; 
       }
+
       return data.data.map((airport) => ({
         value: airport.iataCode,
         label: `${airport.address.cityName} - ${airport.name} (${airport.iataCode})`,
       }));
+
     } catch (err) {
       console.error("Airport search fetch failed:", err);
       return []; 
@@ -53,27 +51,23 @@ export default function AmadeusFlightSearch() {
     e.preventDefault();
     setError("");
 
-    // Updated validation check
-    if (!origin || !destination || !departureDate || (tripType === "ROUND_TRIP" && !returnDate)) {
-      setError("Please fill in all required flight details.");
+    if (!origin || !destination || !departureDate || !adults) {
+      setError("Please fill in Origin, Destination, Departure Date, and Adults.");
       return;
     }
 
     setLoading(true);
 
     try {
-      // --- UPDATED SEARCH PARAMETERS ---
       const searchParams = {
         origin: origin.value,
         destination: destination.value,
         departureDate: departureDate,
-        returnDate: tripType === "ROUND_TRIP" ? returnDate : null,
+        returnDate: returnDate || null,
         adults: adults,
-        children: children,
-        travelClass: travelClass,
       };
-      // ---------------------------------
 
+      // THIS IS THE CORRECT URL
       const res = await fetch(`${API_BASE_URL}/flight-offers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -103,34 +97,6 @@ export default function AmadeusFlightSearch() {
     <div className="flight-search-form">
       <h2>Search Flights with Amadeus</h2>
       <form onSubmit={handleSearch}>
-
-        {/* --- NEW: Trip Type Radio Buttons --- */}
-        <div className="form-row trip-type">
-          <div className="form-group-radio">
-            <input 
-              type="radio" 
-              id="roundtrip" 
-              name="tripType" 
-              value="ROUND_TRIP"
-              checked={tripType === "ROUND_TRIP"}
-              onChange={(e) => setTripType(e.target.value)}
-            />
-            <label htmlFor="roundtrip">Round-trip</label>
-          </div>
-          <div className="form-group-radio">
-            <input 
-              type="radio" 
-              id="one-way" 
-              name="tripType" 
-              value="ONE_WAY"
-              checked={tripType === "ONE_WAY"}
-              onChange={(e) => setTripType(e.target.value)}
-            />
-            <label htmlFor="one-way">One-way</label>
-          </div>
-        </div>
-
-        {/* --- Origin/Destination --- */}
         <div className="form-row">
           <div className="form-group">
             <label>Origin</label>
@@ -139,10 +105,10 @@ export default function AmadeusFlightSearch() {
               defaultOptions
               loadOptions={loadAirportOptions}
               onChange={setOrigin}
-              placeholder="City or Airport (e.g., NYC)"
+              placeholder="City or Airport (e.g., SYD)"
               className="react-select-container"
               classNamePrefix="react-select"
-              noOptionsMessage={() => null} 
+              noOptionsMessage={() => null} // Hides "No options"
             />
           </div>
           <div className="form-group">
@@ -152,15 +118,14 @@ export default function AmadeusFlightSearch() {
               defaultOptions
               loadOptions={loadAirportOptions}
               onChange={setDestination}
-              placeholder="City or Airport (e.g., PAR)"
+              placeholder="City or Airport (e.g., LHR)"
               className="react-select-container"
               classNamePrefix="react-select"
-              noOptionsMessage={() => null} 
+              noOptionsMessage={() => null} // Hides "No options"
             />
           </div>
         </div>
 
-        {/* --- Dates (Return date is now conditional) --- */}
         <div className="form-row">
           <div className="form-group">
             <label>Departure Date</label>
@@ -172,51 +137,26 @@ export default function AmadeusFlightSearch() {
             />
           </div>
           <div className="form-group">
-            <label>Return Date</label>
+            <label>Return Date (Optional)</label>
             <input
               type="date"
               value={returnDate}
               onChange={(e) => setReturnDate(e.target.value)}
-              disabled={tripType === "ONE_WAY"} // <-- DISBALED LOGIC
-              required={tripType === "ROUND_TRIP"}
-              style={{
-                backgroundColor: tripType === "ONE_WAY" ? "#f4f4f4" : "#fff"
-              }}
             />
           </div>
         </div>
 
-        {/* --- NEW: Passenger/Class Selection --- */}
         <div className="form-row">
           <div className="form-group">
-            <label>Adults (12+)</label>
+            <label>Adults</label>
             <input
               type="number"
               min="1"
               max="9"
               value={adults}
-              onChange={(e) => setAdults(parseInt(e.target.value, 10))}
+              onChange={(e) => setAdults(e.target.value)}
               required
             />
-          </div>
-          <div className="form-group">
-            <label>Children (2-11)</label>
-            <input
-              type="number"
-              min="0"
-              max="9"
-              value={children}
-              onChange={(e) => setChildren(parseInt(e.target.value, 10))}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Cabin Class</label>
-            <select value={travelClass} onChange={(e) => setTravelClass(e.target.value)}>
-              <option value="ECONOMY">Economy</option>
-              <option value="BUSINESS">Business</option>
-              <option value="FIRST">First Class</option>
-            </select>
           </div>
         </div>
         
