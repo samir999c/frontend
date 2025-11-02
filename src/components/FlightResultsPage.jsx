@@ -1,3 +1,5 @@
+// src/components/FlightResultsPage.jsx
+
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config.js";
@@ -6,14 +8,49 @@ import "./FlightResultsPage.css";
 export default function FlightResultsPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  // ... (rest of the component)
 
+  // Use default values to prevent crashes if state is missing
+  const { flights, dictionaries } = location.state || { flights: [], dictionaries: {} };
+
+  const [pricingError, setPricingError] = useState("");
+  const [selectedFlightId, setSelectedFlightId] = useState(null); 
+
+  if (!flights || flights.length === 0) {
+    return (
+      <div className="flight-results-container">
+        <h2>No Flights Found</h2>
+        <p>Your search returned no results. Please try again with different criteria (e.g., NYC to PAR).</p>
+        <button onClick={() => navigate("/koalaroute")}>Back to Search</button>
+      </div>
+    );
+  }
+
+  // Helper to get Airline Name (now safer)
+  const getAirlineName = (carrierCode) => {
+    return dictionaries?.carriers?.[carrierCode] || carrierCode;
+  };
+
+  // Helper to render segments (now safer)
+  const renderItinerary = (itinerary) => {
+    // Check if itinerary or segments are missing
+    if (!itinerary?.segments) return <p>Flight details unavailable.</p>;
+
+    return itinerary.segments.map((segment, index) => (
+      <div key={index} className="segment">
+        <span className="iata">{segment?.departure?.iataCode || '?'}</span>
+        <span> → </span>
+        <span className="iata">{segment?.arrival?.iataCode || '?'}</span>
+        <span className="airline">({getAirlineName(segment?.carrierCode)})</span>
+      </div>
+    ));
+  };
+
+  // This is STEP 2: Price Confirmation (URL fixed to remove /amadeus)
   const handleSelectFlight = async (flightOffer) => {
     setSelectedFlightId(flightOffer.id);
     setPricingError("");
 
     try {
-      // *** URL FIXED: Removed /amadeus prefix ***
       const res = await fetch(`${API_BASE_URL}/flight-offers/price`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -36,8 +73,6 @@ export default function FlightResultsPage() {
     }
   };
 
-  // ... (rest of your component's JSX)
-  // ... (no changes needed in the return statement)
   return (
     <div className="flight-results-container">
       <h2>Flight Results</h2>
@@ -45,9 +80,20 @@ export default function FlightResultsPage() {
       <div className="flights-list">
         {flights.map((offer) => (
           <div key={offer.id} className="flight-card">
-            {/* ... flight card details ... */}
-             <div className="booking-section">
-              <div className="price">{offer.price.total} <span>{offer.price.currency}</span></div>
+            <div className="flight-details">
+              {/* Add safety check for itineraries */}
+              {offer?.itineraries?.map((itinerary, index) => (
+                <div key={index} className="itinerary">
+                  <strong>{index === 0 ? "Outbound" : "Return"}</strong>
+                  {renderItinerary(itinerary)}
+                  {/* CRITICAL FIX: Add optional chaining to duration */}
+                  <p>Duration: {itinerary?.duration?.replace('PT', '').replace('H', 'h ').replace('M', 'm') || 'N/A'}</p>
+                </div>
+              ))}
+            </div>
+            <div className="booking-section">
+              {/* CRITICAL FIX: Add optional chaining to price */}
+              <div className="price">{offer?.price?.total || 'N/A'} <span>{offer?.price?.currency || ''}</span></div>
               <button 
                 onClick={() => handleSelectFlight(offer)} 
                 disabled={selectedFlightId === offer.id}
