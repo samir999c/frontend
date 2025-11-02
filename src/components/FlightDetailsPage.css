@@ -1,0 +1,181 @@
+.details-container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  display: flex;
+  gap: 2rem;
+}
+
+.itinerary-details {
+  flex: 3;
+}
+
+.itinerary-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.itinerary-card h2 {
+  padding: 1rem 1.5rem;
+  margin: 0;
+  border-bottom: 1px solid #eee;
+}
+
+.total-duration {
+  font-weight: 600;
+  font-size: 1.1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.segment {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.segment-time-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+}
+.segment-time-date strong {
+  font-size: 1.25rem;
+  color: #000;
+}
+.segment-time-date span {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.segment-route-info {
+  flex: 1;
+  text-align: center;
+}
+.segment-route-info .iata {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.route-line-details {
+  height: 1px;
+  background-color: #ccc;
+  margin: 0.5rem 0;
+}
+.route-line-details span {
+  font-size: 0.9rem;
+  color: #777;
+  background: #fff;
+  padding: 0 0.5rem;
+  position: relative;
+  top: -0.6rem;
+}
+
+.segment-airline {
+  min-width: 150px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.segment-airline span {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: #777;
+  text-transform: none;
+}
+
+.layover {
+  text-align: center;
+  font-weight: 600;
+  color: #555;
+  padding: 1rem;
+  background: #f9f9f9;
+  border-top: 1px dashed #ddd;
+  border-bottom: 1px dashed #ddd;
+}
+
+/* --- Sidebar --- */
+.summary-sidebar {
+  flex: 1;
+  position: sticky;
+  top: 2rem;
+  height: fit-content;
+}
+
+.info-box, .price-box {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.price-box h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+}
+.price-box .price {
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+.price-box .price span {
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: #666;
+}
+
+.info-box h3 {
+  margin-top: 0;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.5rem;
+}
+.info-box p {
+  margin-bottom: 0.5rem;
+}
+
+.continue-button {
+  width: 100%;
+  padding: 0.85rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.continue-button:hover:not(:disabled) {
+  background-color: #218838;
+}
+.continue-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.error-text {
+  color: #d93025;
+  background: #fbeae9;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #d93025;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 900px) {
+  .details-container {
+    flex-direction: column;
+  }
+  .summary-sidebar {
+    position: static;
+  }
+}
