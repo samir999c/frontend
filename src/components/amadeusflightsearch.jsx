@@ -26,7 +26,7 @@ export default function AmadeusFlightSearch() {
       
       // --- URL FIX: Added /api prefix BACK ---
       const res = await fetch(
-        `${API_BASE_URL}/api/airport-search?keyword=${inputValue}&_cacheBust=${cacheBust}`
+        `${API_BASE_URL}/airport-search?keyword=${inputValue}&_cacheBust=${cacheBust}`
       );
       
       if (!res.ok) {
@@ -68,7 +68,7 @@ export default function AmadeusFlightSearch() {
       };
       
       // --- URL FIX: Added /api prefix BACK ---
-      const res = await fetch(`${API_BASE_URL}/api/flight-offers`, {
+      const res = await fetch(`${API_BASE_URL}/flight-offers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(searchParams),
