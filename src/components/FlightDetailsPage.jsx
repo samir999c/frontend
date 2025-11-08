@@ -1,38 +1,45 @@
-import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../config.js';
-import './FlightDetailsPage.css'; // We will create this file next
+// src/components/FlightResultsPage.jsx
 
-// --- HELPER FUNCTIONS ---
+import React from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import "./FlightResultsPage.css"; // We will update this file
+
+// --- HELPER FUNCTIONS (No changes) ---
 const formatTime = (dateTimeString) => {
   const date = new Date(dateTimeString);
-  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  return date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
 };
+
 const formatDate = (dateTimeString) => {
   const date = new Date(dateTimeString);
-  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'long',
+    day: 'numeric'
+  });
 };
+
 const formatDuration = (duration) => {
   return duration.replace('PT', '').replace('H', 'h ').replace('M', 'm');
 };
+// -------------------------
 
-// --- MAIN COMPONENT ---
-export default function FlightDetailsPage() {
+export default function FlightResultsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Get the offer and dictionaries from the results page
-  const { offer, dictionaries } = location.state || {};
+  const { flights, dictionaries } = location.state || { flights: [], dictionaries: {} };
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  if (!offer) {
+  if (!flights || flights.length === 0) {
     return (
-      <div className="details-container">
-        <h2>Error</h2>
-        <p>No flight selected. Please go back to search.</p>
-        <button onClick={() => navigate('/koalaroute')}>Back to Search</button>
+      <div className="flight-results-container">
+        <h2>No Flights Found</h2>
+        <p>Your search returned no results. Please try again.</p>
+        <button className="back-to-search-btn" onClick={() => navigate("/koalaroute")}>Back to Search</button>
       </div>
     );
   }
@@ -41,131 +48,116 @@ export default function FlightDetailsPage() {
     return dictionaries?.carriers?.[carrierCode] || carrierCode;
   };
 
-  // --- This is the Price Check logic, moved from the results page ---
-  const handleContinue = async () => {
-    setLoading(true);
-    setError('');
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/flight-offers/price`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ flightOffers: [offer] }),
-      });
-
-      const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(data.error?.errors?.[0]?.detail || "Failed to re-price flight. Offer may have expired.");
-      }
-
-      // Success! Get the *new* priced offer
-      const pricedOffer = data.data.flightOffers[0];
-      
-      // Navigate to the passenger form with the confirmed-price offer
-      navigate("/flights/passengers", { state: { pricedOffer } });
-
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  const getAirportName = (iataCode) => {
+    return dictionaries?.locations?.[iataCode]?.city || iataCode;
   };
 
-  // --- Functions to render details ---
-
-  const renderSegment = (segment) => (
-    <div className="segment" key={segment.id}>
-      <div className="segment-time-date">
-        <strong>{formatTime(segment.departure.at)}</strong>
-        <span>{formatDate(segment.departure.at)}</span>
-      </div>
-      <div className="segment-route-info">
-        <span className="iata">{segment.departure.iataCode}</span>
-        <div className="route-line-details">
-          <span>{formatDuration(segment.duration)}</span>
-        </div>
-        <span className="iata">{segment.arrival.iataCode}</span>
-      </div>
-      <div className="segment-time-date">
-        <strong>{formatTime(segment.arrival.at)}</strong>
-        <span>{formatDate(segment.arrival.at)}</span>
-      </div>
-      <div className="segment-airline">
-        {getAirlineName(segment.carrierCode)} ({segment.carrierCode} {segment.number})
-        <span>{segment.aircraft.code.replace('_', ' ')}</span>
-      </div>
-    </div>
-  );
-
-  const renderLayover = (segments, index) => {
-    const prevSegment = segments[index];
-    const nextSegment = segments[index + 1];
-
-    if (!nextSegment) return null;
-
-    const layoverMs = new Date(nextSegment.departure.at) - new Date(prevSegment.arrival.at);
-    const layoverDuration = formatDuration(`PT${Math.floor(layoverMs / 3600000)}H${Math.floor((layoverMs % 3600000) / 60000)}M`);
-
-    return (
-      <div className="layover">
-        Layover: {layoverDuration} in {prevSegment.arrival.iataCode}
-      </div>
-    );
+  const handleSelectFlight = (flightOffer) => {
+    navigate("/flights/details", { 
+      state: { 
+        offer: flightOffer, 
+        dictionaries: dictionaries 
+      } 
+    });
   };
 
-  const renderBaggage = () => {
-    try {
-      // Amadeus baggage info is complex, this is a simple summary
-      const travelerPricing = offer.travelerPricings[0];
-      const fareDetails = travelerPricing.fareDetailsBySegment[0];
-      
-      return (
-        <div className="info-box">
-          <h3>Baggage Allowance</h3>
-          <p>Cabin: {fareDetails.cabin}</p>
-          <p>Included Checked Bags: {fareDetails.includedCheckedBags.quantity || 0}</p>
-        </div>
-      );
-    } catch (e) {
-      return <div className="info-box"><h3>Baggage</h3><p>Info not available.</p></div>;
-    }
-  };
+  const departureDate = formatDate(flights[0].itineraries[0].segments[0].departure.at);
 
   return (
-    <div className="details-container">
-      <div className="itinerary-details">
-        {offer.itineraries.map((itinerary, index) => (
-          <div className="itinerary-card" key={index}>
-            <h2>{index === 0 ? "Outbound" : "Return"}</h2>
-            <p className="total-duration">Total Duration: {formatDuration(itinerary.duration)}</p>
-            {itinerary.segments.map((segment, segIndex) => (
-              <React.Fragment key={segIndex}>
-                {renderSegment(segment)}
-                {renderLayover(itinerary.segments, segIndex)}
-              </React.Fragment>
-            ))}
-          </div>
-        ))}
+    <div className="flight-results-container">
+      <div className="results-header">
+        <h2>Flight Results</h2>
+        <span>{departureDate}</span>
       </div>
 
-      <div className="summary-sidebar">
-        <div className="price-box">
-          <h2>Total Price</h2>
-          <div className="price">{offer.price.total} <span>{offer.price.currency}</span></div>
-        </div>
-        {renderBaggage()}
-        <div className="info-box">
-          <h3>Fare Rules</h3>
-          <p>{offer.numberOfBookableSeats} seats left</p>
-          <p>{offer.pricingOptions.refundableFare ? "Refundable" : "Non-Refundable"}</p>
+      <div className="flights-list">
+        {flights.map((offer) => (
+          <FlightCard
+            key={offer.id}
+            offer={offer}
+            getAirlineName={getAirlineName}
+            getAirportName={getAirportName}
+            onSelect={() => handleSelectFlight(offer)}
+          />
+        ))}
+      </div>
+    </div>
+  ); 
+}
+
+
+// --- FlightCard Component (Logo added) ---
+function FlightCard({ offer, getAirlineName, getAirportName, onSelect }) {
+  
+  const itinerary = offer.itineraries[0]; 
+  const segments = itinerary.segments;
+  const firstSegment = segments[0];
+  const lastSegment = segments[segments.length - 1];
+  const stops = segments.length - 1;
+
+  const airlineName = getAirlineName(firstSegment.carrierCode);
+  
+  // --- NEW: Get the airline code for the logo ---
+  const airlineCode = firstSegment.carrierCode;
+  const flightNumber = firstSegment.carrierCode + " " + firstSegment.number;
+
+  return (
+    <div className="flight-card" onClick={onSelect}>
+      
+      {/* --- MODIFIED: Added <img> tag --- */}
+      <div className="card-airline-name">
+        <img
+          src={`https://content.r9cdn.net/rimg/provider-logos/airlines/v/${airlineCode}.png`}
+          alt=""
+          className="airline-logo"
+          onError={(e) => { e.target.style.display = 'none'; }} // Hide if logo fails
+        />
+        <span>{airlineName}</span>
+      </div>
+      {/* ------------------------------- */}
+
+      <div className="card-main-content">
+        {/* Left Column: Origin */}
+        <div className="journey-point start">
+          <strong>{formatTime(firstSegment.departure.at)}</strong>
+          <span className="iata-code">{firstSegment.departure.iataCode}</span>
+          <span className="airport-name">{getAirportName(firstSegment.departure.iataCode)}</span>
         </div>
 
-        {error && <p className="error-text">{error}</p>}
-        
-        <button onClick={handleContinue} className="continue-button" disabled={loading}>
-          {loading ? "Confirming Price..." : "Continue"}
-        </button>
+        {/* Middle Column: Timeline */}
+        <div className="journey-middle-line">
+          <div className="duration">🕒 {formatDuration(itinerary.duration)}</div>
+          <div className="line-graphic">
+            <span className="dot"></span>
+            <span className="line"></span>
+            {stops > 0 && (
+              <>
+                <div className="stopover-info">
+                  <span className="stop-text">{stops} Stop</span>
+                  <span className="stop-pill">{segments[0].arrival.iataCode}</span>
+                </div>
+                <span className="line"></span>
+              </>
+            )}
+            <span className="dot"></span>
+          </div>
+          <div className="flight-number">{flightNumber}</div>
+        </div>
+
+        {/* Right Column: Destination */}
+        <div className="journey-point end">
+          <strong>{formatTime(lastSegment.arrival.at)}</strong>
+          <span className="iata-code">{lastSegment.arrival.iataCode}</span>
+          <span className="airport-name">{getAirportName(lastSegment.arrival.iataCode)}</span>
+        </div>
+
+        {/* Price & Button Column */}
+        <div className="booking-section">
+          <div className="price">{offer.price.total} <span>{offer.price.currency}</span></div>
+          <button className="book-now-button">
+            Select Flight
+          </button>
+        </div>
       </div>
     </div>
   );
