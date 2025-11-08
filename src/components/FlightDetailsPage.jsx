@@ -55,7 +55,7 @@ export default function FlightResultsPage() {
   const handleSelectFlight = (flightOffer) => {
     navigate("/flights/details", { 
       state: { 
-        offer: flightOffer, 
+         flight: flightOffer, 
         dictionaries: dictionaries 
       } 
     });
