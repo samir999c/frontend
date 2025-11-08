@@ -1,39 +1,11 @@
-// src/components/FlightResultsPage.jsx
-
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./FlightResultsPage.css"; // We will update this file
-
-// --- HELPER FUNCTIONS (Your existing functions are perfect) ---
-const formatTime = (dateTimeString) => {
-  const date = new Date(dateTimeString);
-  return date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
-};
-
-const formatDate = (dateTimeString) => {
-  const date = new Date(dateTimeString);
-  // Enhanced format to be more prominent
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'long',
-    day: 'numeric'
-  });
-};
-
-const formatDuration = (duration) => {
-  return duration.replace('PT', '').replace('H', 'h ').replace('M', 'm');
-};
-// ------------------------------------------
 
 export default function FlightResultsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Your code, works perfectly.
   const { flights, dictionaries } = location.state || { flights: [], dictionaries: {} };
 
   if (!flights || flights.length === 0) {
@@ -41,24 +13,71 @@ export default function FlightResultsPage() {
       <div className="flight-results-container">
         <h2>No Flights Found</h2>
         <p>Your search returned no results. Please try again.</p>
-        <button className="back-to-search-btn" onClick={() => navigate("/koalaroute")}>Back to Search</button>
+        <button onClick={() => navigate("/koalaroute")}>Back to Search</button>
       </div>
     );
   }
 
-  // --- NEW HELPER FUNCTIONS for names ---
+  // --- NEW HELPER FUNCTIONS for better display ---
+  const formatTime = (dateTimeString) => {
+    const date = new Date(dateTimeString);
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const formatDate = (dateTimeString) => {
+    const date = new Date(dateTimeString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+  // ------------------------------------------
+
   const getAirlineName = (carrierCode) => {
     return dictionaries?.carriers?.[carrierCode] || carrierCode;
   };
 
-  // This is the new function to get airport names
-  const getAirportName = (iataCode) => {
-    // Dictionaries 'locations' holds airport info
-    return dictionaries?.locations?.[iataCode]?.city || iataCode;
-  };
-  // ------------------------------------
+  // --- UPDATED RENDER FUNCTION to show times ---
+  const renderItinerarySummary = (itinerary) => {
+    if (!itinerary?.segments) return <p>Flight details unavailable.</p>;
 
+    // Get first segment
+    const firstSegment = itinerary.segments[0];
+    // Get last segment
+    const lastSegment = itinerary.segments[itinerary.segments.length - 1];
+
+    return (
+      <div className="itinerary-summary">
+        <div className="segment-summary">
+          <div className="time-iata">
+            <strong>{formatTime(firstSegment.departure.at)}</strong>
+            <span>{firstSegment.departure.iataCode}</span>
+          </div>
+          <div className="route-line-summary"></div>
+          <div className="time-iata">
+            <strong>{formatTime(lastSegment.arrival.at)}</strong>
+            <span>{lastSegment.arrival.iataCode}</span>
+          </div>
+        </div>
+        <div className="airline-summary">
+          {itinerary.segments.map(s => getAirlineName(s.carrierCode)).join(' → ')}
+        </div>
+        <div className="duration-summary">
+          Duration: {itinerary.duration.replace('PT', '').replace('H', 'h ').replace('M', 'm')}
+        </div>
+      </div>
+    );
+  };
+  // ------------------------------------------
+
+  // --- UPDATED HANDLER: Navigates to details page ---
   const handleSelectFlight = (flightOffer) => {
+    // We don't price check here anymore. We do it on the details page.
+    // Just navigate and pass the offer and dictionaries.
     navigate("/flights/details", { 
       state: { 
         offer: flightOffer, 
@@ -66,114 +85,33 @@ export default function FlightResultsPage() {
       } 
     });
   };
-
-  // Get the date from the first flight to display in the header
-  const departureDate = formatDate(flights[0].itineraries[0].segments[0].departure.at);
+  // ------------------------------------------------
 
   return (
     <div className="flight-results-container">
-      {/* --- NEW: Header with Date --- */}
-      <div className="results-header">
-        <h2>Flight Results</h2>
-        <span>{departureDate}</span>
-      </div>
-      {/* --------------------------- */}
-
+      <h2>Flight Results</h2>
       <div className="flights-list">
         {flights.map((offer) => (
-          // Render the new, complex card
-          <FlightCard
-            key={offer.id}
-            offer={offer}
-            getAirlineName={getAirlineName}
-            getAirportName={getAirportName}
-            onSelect={() => handleSelectFlight(offer)}
-          />
-        ))}
-      </div>
-    </div>
-  ); 
-}
-
-
-// --- NEW FlightCard Component ---
-// This contains the new design logic you wanted
-function FlightCard({ offer, getAirlineName, getAirportName, onSelect }) {
-  
-  // We'll just show the first itinerary (outbound)
-  const itinerary = offer.itineraries[0]; 
-  const segments = itinerary.segments;
-  const firstSegment = segments[0];
-  const lastSegment = segments[segments.length - 1];
-  const stops = segments.length - 1;
-
-  // Get the main airline for the card
-  const airlineName = getAirlineName(firstSegment.carrierCode);
-
-  return (
-    <div className="flight-card" onClick={onSelect}>
-      <div className="flight-details">
-        {/* Airline Info */}
-        <div className="airline-info">
-          <span className="airline-name">{airlineName}</span>
-          {/* You could add an <img /> logo here later */}
-        </div>
-
-        {/* Journey Visualization */}
-        <div className="journey-info">
-          
-          <div className="journey-point start">
-            <strong>{formatTime(firstSegment.departure.at)}</strong>
-            <span className="iata-code">{firstSegment.departure.iataCode}</span>
-            {/* --- NEW: Airport Name --- */}
-            <span className="airport-name">{getAirportName(firstSegment.departure.iataCode)}</span>
-          </div>
-
-          <div className="journey-line">
-            <span className="duration">🕒 {formatDuration(itinerary.duration)}</span>
-            <div className="line-graphic">
-              <span className="dot"></span>
-              <span className="line"></span>
-              
-              {/* --- THIS IS THE STOPOVER LOGIC --- */}
-              {stops === 0 && (
-                <span className="stop-text direct">Direct</span>
-              )}
-              {stops > 0 && (
-                <div className="stop-text">
-                  <span>{stops} {stops > 1 ? 'Stops' : 'Stop'}</span>
-                  {/* Show IATA code for each stop */}
-                  {segments.slice(0, -1).map(seg => (
-                    <span key={seg.id} className="stop-iata">{seg.arrival.iataCode}</span>
-                  ))}
+          <div key={offer.id} className="flight-card">
+            <div className="flight-details">
+              {offer?.itineraries?.map((itinerary, index) => (
+                <div key={index} className="itinerary-block">
+                  <strong>{index === 0 ? "Outbound" : "Return"}</strong>
+                  {renderItinerarySummary(itinerary)}
                 </div>
-              )}
-              {/* ------------------------------------- */}
-
-              <span className="dot"></span>
+              ))}
             </div>
-            <span className="airline-list">
-              {/* List all airlines in the journey */}
-              {[...new Set(segments.map(s => s.carrierCode))].join(', ')}
-            </span>
+            <div className="booking-section">
+              <div className="price">{offer?.price?.total || 'N/A'} <span>{offer?.price?.currency || ''}</span></div>
+              <button 
+                onClick={() => handleSelectFlight(offer)} 
+                className="book-now-button"
+              >
+                Select Flight
+              </button>
+            </div>
           </div>
-
-          <div className="journey-point end">
-            <strong>{formatTime(lastSegment.arrival.at)}</strong>
-            <span className="iata-code">{lastSegment.arrival.iataCode}</span>
-            {/* --- NEW: Airport Name --- */}
-            <span className="airport-name">{getAirportName(lastSegment.arrival.iataCode)}</span>
-          </div>
-
-        </div>
-      </div>
-
-      {/* Booking Section (uses your existing class names) */}
-      <div className="booking-section">
-        <div className="price">{offer.price.total} <span>{offer.price.currency}</span></div>
-        <button className="book-now-button">
-          Select Flight
-        </button>
+        ))}
       </div>
     </div>
   );
