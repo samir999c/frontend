@@ -1,64 +1,219 @@
-/* Add these styles to your FlightResultsPage.css file */
+/* src/components/FlightResultsPage.css */
 
-.itinerary-block {
-  margin-bottom: 1.5rem;
+.flight-results-container {
+  max-width: 950px;
+  margin: 20px auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: #f4f7f6; /* Light grey background */
+  padding: 20px;
+  border-radius: 8px;
 }
-.itinerary-block:last-child {
-  margin-bottom: 0.5rem;
+
+/* --- NEW: Header --- */
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #ddd;
 }
-.itinerary-block strong {
-  font-size: 1.1rem;
+.results-header h2 {
+  margin: 0;
   color: #333;
-  display: block;
-  margin-bottom: 0.75rem;
 }
-
-.itinerary-summary {
-  font-size: 1rem;
+.results-header span {
+  font-size: 1.1rem;
+  font-weight: 500;
   color: #555;
 }
 
-.segment-summary {
+/* --- List --- */
+.flights-list {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
+  flex-direction: column;
+  gap: 15px;
 }
 
-.time-iata {
+/* --- The New Flight Card --- */
+.flight-card {
+  display: flex;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+  cursor: pointer;
+}
+.flight-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #007bff; /* Highlight on hover */
+}
+
+.flight-details {
+  flex-grow: 1;
+  padding: 20px;
+}
+.booking-section {
+  background: #f8f9fa;
+  border-left: 1px solid #eee;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  min-width: 180px;
+}
+
+/* --- Airline & Journey --- */
+.airline-info {
+  margin-bottom: 20px;
+}
+.airline-name {
+  font-weight: 600;
+  color: #444;
+}
+
+.journey-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.journey-point {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 120px; /* Give it a fixed width */
+  flex-shrink: 0;
+}
+.journey-point.start { align-items: flex-start; }
+.journey-point.end { align-items: flex-end; }
+
+.journey-point strong {
+  font-size: 1.5rem;
+  color: #111;
+}
+.journey-point .iata-code {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #333;
+}
+/* NEW: Airport Name Style */
+.journey-point .airport-name {
+  font-size: 0.8rem;
+  color: #777;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px; /* Prevents long names from breaking layout */
+}
+
+/* --- The Stopover Line --- */
+.journey-line {
+  flex-grow: 1;
+  text-align: center;
+  padding: 0 20px;
+  min-width: 150px; /* Ensure it has space */
+}
+.journey-line .duration {
+  font-size: 0.9rem;
+  color: #555;
+  display: block;
+  margin-bottom: 5px;
+}
+.journey-line .airline-list {
+  font-size: 0.8rem;
+  color: #888;
+  display: block;
+  margin-top: 5px;
+}
+
+.line-graphic {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.line-graphic .line {
+  flex-grow: 1;
+  height: 1px;
+  background: #ccc;
+  border-bottom: 1px dashed #ccc;
+}
+.line-graphic .dot {
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border: 2px solid #007bff;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Stopover Text Styling */
+.stop-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0 10px;
+  color: #333;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 3px; /* Space between "1 Stop" and the IATA pills */
+}
+.stop-text.direct {
+  color: #28a745; /* Green for direct */
+}
+/* This is the IATA code "pill" */
+.stop-text .stop-iata {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #007bff;
+  background: #eef6ff;
+  padding: 2px 5px;
+  border-radius: 3px;
 }
 
-.time-iata strong {
-  font-size: 1.1rem;
-  color: #000;
-  margin-bottom: 0;
+/* --- Price & Button (using your classes) --- */
+.booking-section .price {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 5px;
+}
+.booking-section .price span {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #444;
 }
 
-.time-iata span {
-  font-size: 0.9rem;
+.book-now-button {
+  background-color: #28a745; /* Green like your screenshot */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 12px 16px;
+  font-size: 1rem;
   font-weight: 600;
-  color: #666;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 10px;
+  transition: background-color 0.2s ease;
+}
+.book-now-button:hover {
+  background-color: #218838;
 }
 
-.route-line-summary {
-  flex: 1;
-  height: 1px;
-  background-color: #ccc;
-  border-top: 1px dashed #ccc;
+/* --- No Flights / Error --- */
+.back-to-search-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }
-
-.airline-summary {
-  font-size: 0.9rem;
-  font-style: italic;
-  color: #333;
-  margin-bottom: 0.5rem;
-  text-transform: capitalize;
-}
-
-.duration-summary {
-  font-size: 0.9rem;
-  color: #666;
+.back-to-search-btn:hover {
+  background-color: #0056b3;
 }
