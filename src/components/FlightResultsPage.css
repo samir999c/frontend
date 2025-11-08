@@ -41,24 +41,11 @@
   border-color: #007bff;
 }
 
-/* --- MODIFIED: Added flex properties --- */
 .card-airline-name {
   font-size: 0.9rem;
   font-weight: 600;
   color: #555;
   margin-bottom: 15px;
-  /* New styles */
-  display: flex;
-  align-items: center;
-  gap: 8px; /* Space between logo and name */
-}
-
-/* --- NEW: Logo styling --- */
-.airline-logo {
-  width: 20px;
-  height: 20px;
-  border-radius: 3px;
-  object-fit: contain;
 }
 
 .card-main-content {
