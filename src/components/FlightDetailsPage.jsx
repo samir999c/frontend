@@ -14,14 +14,12 @@ export default function FlightDetailsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // --- THIS IS THE CRITICAL PART ---
-  // It correctly looks for 'offer' and 'dictionaries'
+  // We get the state
   const { offer, dictionaries } = location.state || {};
 
-  // This is the check that shows your error.
-  // If 'offer' is missing (because you refreshed or the key was wrong),
-  // it will show the "No Flight Selected" message.
-  if (!offer || !dictionaries) {
+  // --- THIS IS THE FIX ---
+  // We ONLY check for 'offer'. Dictionaries are optional.
+  if (!offer) {
     return (
       <div className="details-container-error">
         <h2>No Flight Selected</h2>
@@ -32,19 +30,28 @@ export default function FlightDetailsPage() {
       </div>
     );
   }
+  // -----------------------
 
-  // --- Helper functions to get names ---
-  const getAirportName = (code) => dictionaries.locations[code]?.city || code;
-  const getAirlineName = (code) => dictionaries.carriers[code] || code;
+  // --- SECOND FIX ---
+  // Helper functions are now "safe". They use '?.' (optional chaining)
+  // so they won't crash if 'dictionaries' or 'locations' is missing.
+  const getAirportName = (code) => {
+    return dictionaries?.locations?.[code]?.city || code;
+  };
+  const getAirlineName = (code) => {
+    return dictionaries?.carriers?.[code] || code;
+  };
+  // ------------------
 
   // --- Data Extraction ---
+  // (Safe to run now, because we know 'offer' exists)
   const travelerPricing = offer.travelerPricings[0];
   const fareDetails = travelerPricing.fareDetailsBySegment[0];
 
   const baggageInfo = fareDetails.includedCheckedBags;
   const amenities = fareDetails.amenities || [];
   const seatsLeft = offer.numberOfBookableSeats;
-  const isRefundable = offer.pricingOptions.refundableFare.toString(); // Use toString() just in case
+  const isRefundable = offer.pricingOptions.refundableFare;
 
   const handleContinue = () => {
     // Navigate to the next page
@@ -85,8 +92,8 @@ export default function FlightDetailsPage() {
               <strong>Seats Left:</strong> {seatsLeft}
             </li>
             <li>
-              <span className="icon">{isRefundable === 'true' ? '✅' : '❌'}</span>
-              <strong>Refundable:</strong> {isRefundable === 'true' ? 'Yes' : 'Non-Refundable'}
+              <span className="icon">{isRefundable ? '✅' : '❌'}</span>
+              <strong>Refundable:</strong> {isRefundable ? 'Yes' : 'Non-Refundable'}
             </li>
           </ul>
         </div>
