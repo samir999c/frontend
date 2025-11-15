@@ -56,15 +56,18 @@ export default function FlightResultsPage() {
   };
   // ------------------------------------
 
+  // --- THIS IS THE FIX ---
+  // The key 'offer' has been changed to 'flight'
+  // to match what FlightDetailsPage is expecting.
   const handleSelectFlight = (flightOffer) => {
-    // This navigation is correct. It sends the 'offer' object.
     navigate("/flights/details", { 
       state: { 
-        offer: flightOffer, 
+        flight: flightOffer, // <-- This is the fix
         dictionaries: dictionaries 
       } 
     });
   };
+  // -----------------------
 
   // Get the date from the first flight to display in the header
   const departureDate = formatDate(flights[0].itineraries[0].segments[0].departure.at);
