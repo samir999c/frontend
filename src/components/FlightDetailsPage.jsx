@@ -14,12 +14,16 @@ export default function FlightDetailsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // We get the state
-  const { offer, dictionaries } = location.state || {};
+  // --- THIS IS THE FINAL FIX ---
+  // It checks for 'offer' (which you are sending now)
+  // AND 'flight' (which you might have been sending before).
+  // This will work no matter what.
+  const { offer, flight, dictionaries } = location.state || {};
+  const flightData = offer || flight; // Use whichever one is not null
+  // -----------------------------
 
-  // --- THIS IS THE FIX ---
-  // We ONLY check for 'offer'. Dictionaries are optional.
-  if (!offer) {
+  // This check will now pass.
+  if (!flightData) {
     return (
       <div className="details-container-error">
         <h2>No Flight Selected</h2>
@@ -30,11 +34,8 @@ export default function FlightDetailsPage() {
       </div>
     );
   }
-  // -----------------------
 
-  // --- SECOND FIX ---
-  // Helper functions are now "safe". They use '?.' (optional chaining)
-  // so they won't crash if 'dictionaries' or 'locations' is missing.
+  // --- Helper functions (now safe) ---
   const getAirportName = (code) => {
     return dictionaries?.locations?.[code]?.city || code;
   };
@@ -43,19 +44,18 @@ export default function FlightDetailsPage() {
   };
   // ------------------
 
-  // --- Data Extraction ---
-  // (Safe to run now, because we know 'offer' exists)
-  const travelerPricing = offer.travelerPricings[0];
+  // --- Data Extraction (using flightData) ---
+  const travelerPricing = flightData.travelerPricings[0];
   const fareDetails = travelerPricing.fareDetailsBySegment[0];
 
   const baggageInfo = fareDetails.includedCheckedBags;
   const amenities = fareDetails.amenities || [];
-  const seatsLeft = offer.numberOfBookableSeats;
-  const isRefundable = offer.pricingOptions.refundableFare;
+  const seatsLeft = flightData.numberOfBookableSeats;
+  const isRefundable = flightData.pricingOptions.refundableFare;
 
   const handleContinue = () => {
     // Navigate to the next page
-    navigate("/flights/passengers", { state: { pricedOffer: offer } });
+    navigate("/flights/passengers", { state: { pricedOffer: flightData } });
   };
 
   return (
@@ -64,7 +64,7 @@ export default function FlightDetailsPage() {
       {/* --- ITINERARY DETAILS (MAIN COLUMN) --- */}
       <div className="itinerary-details-container">
         <h2>Flight Details</h2>
-        {offer.itineraries.map((itinerary, index) => (
+        {flightData.itineraries.map((itinerary, index) => (
           <ItineraryTimeline
             key={index}
             itinerary={itinerary}
@@ -78,7 +78,7 @@ export default function FlightDetailsPage() {
       <div className="details-sidebar">
         <div className="info-box price-box">
           <h2>Total Price</h2>
-          <div className="price">{offer.price.total} <span>{offer.price.currency}</span></div>
+          <div className="price">{flightData.price.total} <span>{flightData.price.currency}</span></div>
           <button onClick={handleContinue} className="continue-button">
             Continue to Booking
           </button>
