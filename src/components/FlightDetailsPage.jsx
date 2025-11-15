@@ -1,8 +1,9 @@
 // src/components/FlightDetailsPage.jsx
+// PASTE THIS ENTIRE FILE.
 
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import './FlightDetailsPage.css'; // We will create this
+import './FlightDetailsPage.css'; // Make sure you have this CSS file
 
 // --- Helper Functions ---
 const formatTime = (dateTime) => new Date(dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -13,13 +14,13 @@ export default function FlightDetailsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // --- THIS IS THE FIX ---
-  // We are now correctly looking for 'offer', which your
-  // FlightResultsPage is sending.
+  // --- THIS IS THE CRITICAL PART ---
+  // It correctly looks for 'offer' and 'dictionaries'
   const { offer, dictionaries } = location.state || {};
 
-  // This is the error check that was failing before.
-  // Now that we're looking for 'offer', it will work.
+  // This is the check that shows your error.
+  // If 'offer' is missing (because you refreshed or the key was wrong),
+  // it will show the "No Flight Selected" message.
   if (!offer || !dictionaries) {
     return (
       <div className="details-container-error">
@@ -37,18 +38,16 @@ export default function FlightDetailsPage() {
   const getAirlineName = (code) => dictionaries.carriers[code] || code;
 
   // --- Data Extraction ---
-  // We safely get all the data you asked for.
   const travelerPricing = offer.travelerPricings[0];
   const fareDetails = travelerPricing.fareDetailsBySegment[0];
 
   const baggageInfo = fareDetails.includedCheckedBags;
   const amenities = fareDetails.amenities || [];
   const seatsLeft = offer.numberOfBookableSeats;
-  const isRefundable = offer.pricingOptions.refundableFare;
+  const isRefundable = offer.pricingOptions.refundableFare.toString(); // Use toString() just in case
 
   const handleContinue = () => {
-    // Navigate to the next page, passing the confirmed offer.
-    // Your PassengerFormPage expects the key 'pricedOffer'.
+    // Navigate to the next page
     navigate("/flights/passengers", { state: { pricedOffer: offer } });
   };
 
@@ -86,8 +85,8 @@ export default function FlightDetailsPage() {
               <strong>Seats Left:</strong> {seatsLeft}
             </li>
             <li>
-              <span className="icon">{isRefundable ? '✅' : '❌'}</span>
-              <strong>Refundable:</strong> {isRefundable ? 'Yes' : 'Non-Refundable'}
+              <span className="icon">{isRefundable === 'true' ? '✅' : '❌'}</span>
+              <strong>Refundable:</strong> {isRefundable === 'true' ? 'Yes' : 'Non-Refundable'}
             </li>
           </ul>
         </div>
