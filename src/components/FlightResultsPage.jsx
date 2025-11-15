@@ -57,6 +57,7 @@ export default function FlightResultsPage() {
   // ------------------------------------
 
   const handleSelectFlight = (flightOffer) => {
+    // This navigation is correct. It sends the 'offer' object.
     navigate("/flights/details", { 
       state: { 
         offer: flightOffer, 
@@ -92,23 +93,45 @@ export default function FlightResultsPage() {
 }
 
 
-// --- NEW FlightCard Component (Matches your screenshot) ---
+// --- FlightCard Component (WITH THE BUG FIX) ---
 function FlightCard({ offer, getAirlineName, getAirportName, onSelect }) {
   
+  // --- THIS IS THE FIX ---
+  // If an offer has no itinerary data, skip rendering this card.
+  // This prevents the crash you were seeing.
+  if (!offer.itineraries || offer.itineraries.length === 0) {
+    return null; 
+  }
+  // ------------------------
+
   const itinerary = offer.itineraries[0]; 
   const segments = itinerary.segments;
+  
+  // Extra safety check for segments
+  if (!segments || segments.length === 0) {
+    return null;
+  }
+  
   const firstSegment = segments[0];
   const lastSegment = segments[segments.length - 1];
   const stops = segments.length - 1;
 
   const airlineName = getAirlineName(firstSegment.carrierCode);
+  const airlineCode = firstSegment.carrierCode;
   const flightNumber = firstSegment.carrierCode + " " + firstSegment.number;
 
   return (
     <div className="flight-card" onClick={onSelect}>
       
-      {/* Top airline name */}
-      <div className="card-airline-name">{airlineName}</div>
+      <div className="card-airline-name">
+        <img
+          src={`https://content.r9cdn.net/rimg/provider-logos/airlines/v/${airlineCode}.png`}
+          alt=""
+          className="airline-logo"
+          onError={(e) => { e.target.style.display = 'none'; }} // Hide if logo fails
+        />
+        <span>{airlineName}</span>
+      </div>
 
       <div className="card-main-content">
         {/* Left Column: Origin */}
