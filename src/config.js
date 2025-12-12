@@ -1,6 +1,8 @@
-// export const BASE_URL = import.meta.env.DEV
-//   ? "http://localhost:8888/.netlify/functions/api"
-//   : import.meta.env.VITE_BASE_URL;
+// src/config.js
 
-export const BASE_URL = import.meta.env.VITE_BASE_URL;
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// We are hardcoding the backend URL to stop the double /api/api error
+// DO NOT put /api at the end of this string.
+export const API_BASE_URL = "https://backend1-cube.onrender.com";
+
+// Only for local development if you need it
+export const BASE_URL = "http://localhost:5173";
