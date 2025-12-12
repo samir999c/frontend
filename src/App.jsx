@@ -15,39 +15,41 @@ import KoalaRoute from "./components/KoalaRoute";
 
 // --- NEW IMPORTS for Amadeus Booking Flow ---
 import FlightResultsPage from "./components/FlightResultsPage";
-
-// 1. --- ADD THIS IMPORT ---
 import FlightDetailsPage from "./components/FlightDetailsPage"; 
-
 import PassengerFormPage from "./components/PassengerFormPage";
 import BookingConfirmationPage from "./components/BookingConfirmationPage";
-// ---------------------------------------------
+
+// 1. --- ADD THIS IMPORT ---
+import SeatMapPage from "./components/SeatMapPage";
+// --------------------------
 
 export default function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<Layout />}>
-        
-        <Route index element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/koalaroute" element={<KoalaRoute />} />
-        
-        {/* --- NEW AMADEUS BOOKING FLOW ROUTES --- */}
-        <Route path="/flights/results" element={<FlightResultsPage />} />
+  return (
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        
+        <Route index element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/koalaroute" element={<KoalaRoute />} />
+        
+        {/* --- NEW AMADEUS BOOKING FLOW ROUTES --- */}
+        <Route path="/flights/results" element={<FlightResultsPage />} />
+        <Route path="/flights/details" element={<FlightDetailsPage />} />
+        <Route path="/flights/passengers" element={<PassengerFormPage />} />
         
         {/* 2. --- ADD THIS ROUTE --- */}
-        <Route path="/flights/details" element={<FlightDetailsPage />} />
+        <Route path="/flights/seatmap" element={<SeatMapPage />} />
+        {/* ------------------------- */}
 
-        <Route path="/flights/passengers" element={<PassengerFormPage />} />
-        <Route path="/flights/confirm/:orderId" element={<BookingConfirmationPage />} />
-        {/* -------------------------------------- */}
+        <Route path="/flights/confirm/:orderId" element={<BookingConfirmationPage />} />
+        {/* -------------------------------------- */}
 
-        <Route path="*" element={<NotFound />} />
-      </Route>
-    </Routes>
-  );
+        <Route path="*" element={<NotFound />} />
+      </Route>
+    </Routes>
+  );
 }
