@@ -17,45 +17,52 @@ export default function SeatMapPage() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // 1. Fetch Seat Map on Load
+  // --- 1. SMART URL FIX ---
+  // This line ensures the URL is correct no matter what your config.js says.
+  // It removes any trailing "/api" or "/" so we can append it cleanly ourselves.
+  const cleanBaseUrl = API_BASE_URL.replace(/\/api\/?$/, "").replace(/\/$/, "");
+  // ------------------------
+
+  // 1. Fetch Seat Map
   useEffect(() => {
     if (!pricedOffer) return;
 
     const fetchSeatMap = async () => {
       try {
-        // --- FIX: URL Construction ---
-        // config.js = https://backend1-cube.onrender.com
-        // We add: /api/seatmaps
-        // Result: https://backend1-cube.onrender.com/api/seatmaps (CORRECT)
-        const res = await fetch(`${API_BASE_URL}/api/seatmaps`, {
+        // Use the clean URL + /api/seatmaps
+        const res = await fetch(`${cleanBaseUrl}/api/seatmaps`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pricedOffer: pricedOffer }),
         });
         
-        // Check for HTML/404 response
         const contentType = res.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
-           throw new Error("Seat map service unavailable (Backend Connection Error).");
+           // If we get HTML, the backend is 404ing or crashing
+           throw new Error("Seat map service unavailable.");
         }
 
         const data = await res.json();
         
         if (!res.ok) {
-            // Amadeus Test API often fails here. catch it gracefully.
-            throw new Error("Seat map not supported for this test flight.");
+           // If Amadeus Test API says "no map", we handle it here.
+           // We do NOT use fake data as you requested.
+           setError("Seat selection is not available for this specific flight.");
+           setSeatMapData(null); 
+        } else {
+           setSeatMapData(data.data);
         }
-        setSeatMapData(data.data);
+
       } catch (err) {
-        console.warn("Seat Map Warning:", err.message);
-        setError("Seat selection is not available for this test flight. You can proceed to booking.");
+        console.warn("Seat Map Error:", err.message);
+        setError("Seat selection is not available for this flight.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchSeatMap();
-  }, [pricedOffer]);
+  }, [pricedOffer, cleanBaseUrl]);
 
   // 2. Final Booking Function
   const handleConfirmBooking = async () => {
@@ -63,8 +70,9 @@ export default function SeatMapPage() {
     setError('');
 
     try {
-      // --- FIX: URL Construction here too ---
-      const res = await fetch(`${API_BASE_URL}/api/book`, {
+      // Use the clean URL + /api/book
+      // This is the specific line that was giving you the 404 before.
+      const res = await fetch(`${cleanBaseUrl}/api/book`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -75,13 +83,21 @@ export default function SeatMapPage() {
       });
 
       const data = await res.json();
+      
+      // Check for 404 specifically on booking
+      if (res.status === 404) {
+          throw new Error("Booking endpoint not found (404). Backend might not be deployed.");
+      }
+
       if (!res.ok) throw new Error(data.error?.errors?.[0]?.detail || "Booking failed");
 
+      // Success!
       navigate(`/flights/confirm/${data.data.id}`, { 
         state: { bookingResponse: data.data } 
       });
 
     } catch (err) {
+      console.error(err);
       setError(err.message);
       setBookingLoading(false);
     }
@@ -95,11 +111,12 @@ export default function SeatMapPage() {
       
       {loading && <p>Loading seat map...</p>}
       
-      {error && (
+      {/* If map fails, we show error but allow booking anyway */}
+      {error && !seatMapData && (
         <div className="error-box">
           <p>{error}</p>
-          <button onClick={handleConfirmBooking} className="skip-btn">
-            Skip Seat Selection & Book Flight
+          <button onClick={handleConfirmBooking} className="skip-btn" disabled={bookingLoading}>
+            {bookingLoading ? "Booking..." : "Skip Seat Selection & Book Flight"}
           </button>
         </div>
       )}
@@ -130,7 +147,6 @@ export default function SeatMapPage() {
                              key={seat.number} 
                              className={className}
                              onClick={() => isAvailable && setSelectedSeat(seat.number)}
-                             title={`${seat.number} - $${seat.travelerPricing[0].price.total}`}
                            >
                              {seat.number.slice(-1)}
                            </div>
